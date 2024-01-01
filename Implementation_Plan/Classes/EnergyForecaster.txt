@@ -1,0 +1,23 @@
+EnergyForecaster είναι η κεντρική κλάση του EF.
+
+Είσοδος
+-------
+filename    (str)       Το όνομα του φακέλου/αρχείου που θα δημιουργηθεί από τον DataController.
+
+Χαρακτηριστικά
+--------------
+data_controller         Στιγμιότυπο DataController το οποίο θα διαχειρίζεται τα αρχεία
+preprocessor            Στιγμιότυπο Preprocessor το οποίο θα διαμορφώνει τα δεδομένα σύμφωνα με τις επιλογές του χρήστη
+visualizer              Στιγμιότυπο Visualizer το οποίο θα κατασκευάζει διαγράμματα για τα δεδομένα και τα αποτελέσματα
+statistics              Στιγμιότυπο Stats το οποίο θα παράγει στατιστικές για τα δεδομένα και τα αποτελέσματα
+processes               Στιγμιότυπο της κλάσης ProcessController για εργασίες μοντέλων
+
+Μέθοδοι
+-------
+backup                  Δημιουργία αντίγραφου ασφαλείας όλου του φακέλου
+from_backup             Εξαγωγή φακέλου από αντίγραφο ασφαλείας
+
+Δημιουργία στιγμιότυπου
+-----------------------
+Δημιουργεί στιγμυότυπα των DataController (data_controller), Preprocessor (preprocessor), Visualizer (visualizer),
+Statistics (statistics) και ProcessController (processes).

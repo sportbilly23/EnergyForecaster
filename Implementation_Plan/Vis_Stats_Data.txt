@@ -1,0 +1,56 @@
+Visualizations
+	01) ACF
+	02) PACF
+	03) Feature (time)
+	04) Feature vs Feature (Scatter)
+	05) Forc. variable vs Scaling Feature(s) (time)
+	06) Forecasts and Prediction Intervals (time)
+	07) Decomposition (Trend/Cycle - Season - Residuals)
+	08) Seasonal (comparison)
+	09) Residuals (time)
+	10) Residuals (histogram)
+	
+Statistics
+	01) Box-Pierce test (portmanteau)
+	02) Ljung-Box test (portmanteau)
+	03) Breusch-Godfrey test (autocorrelation)
+	04) KPSS test (unit)
+	05) ADF test (unit)
+	06) Z-score (outliers)
+	07) Complexity Estimate (predictability)
+	08) Mean Absolute Change (predictability)
+	09) Apprximate Entropy (predictability)
+	10) Pearson Correlation
+	11) Spearman Correlation
+	12) MAPE (metrics)
+	13) MAE (metrics)
+	14) RMSE (metrics)
+	15) R^2 (metrics)
+	16) AIC (metrics)
+	17) AICc (metrics)
+	18) BIC (metrics)
+
+Data (Transformations/Normalizations/Fill Null/Indicators)
+	01) Log
+	02) Exp
+	03) Box-Cox
+	04) Min-Max
+	05) Standard
+	06) Robust
+	07) Differentiate
+	08) Croston Method
+	09) Output Limits
+	10) Weekday/Weekend
+	11) Day of Week (idicator/cyclic)
+	12) Day of Month (indicator/cyclic)
+	13) Day of Year (indicator/cyclic)
+	14) Week of Year (indicator/cyclic)
+	15) Month of Year (indicator/cyclic)
+	16) Weekdays per Month
+	17) Public Holidays
+	18) Outliers (indicator)
+	19) Lagged time-series
+	20) Fill NaN
+
+
+	
