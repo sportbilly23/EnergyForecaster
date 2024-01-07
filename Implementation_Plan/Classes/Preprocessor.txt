@@ -10,13 +10,32 @@ DC_list     (dict)      Το λεξικό με τα αρχεία τα οποία
 Χαρακτηριστικά
 --------------
 _EF                     Ο EnergyForecaster στον οποίο ανήκει
-process_files           Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στην μνήμη του DC.
+datasets	            Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στην μνήμη του DC.
+
 
 
 Συναρτήσεις
 -----------
 #TODO: Θα μπούνε οι συναρτήσεις που διαμορφώνουν ή κατασκευάζουν δεδομένα
 
-Δημιουργία στιγμιότυπου
------------------------
-#TODO: Πληροφορίες κατασκευαστή
+  v	01) Log
+  v	02) Exp
+  v	03) Box-Cox
+  v	04) Min-Max
+  v	05) Standard
+  v	06) Robust
+  v	07) Differentiate
+  v	08) Croston Method
+  v	09) Output Limits
+  v	10) Weekday/Weekend
+vvv	11) Day of Week (variable/one hot/cyclic)
+vvv	12) Day of Month (variable/one hot/cyclic)
+vvv	13) Day of Year (variable/one hot/cyclic)
+vvv	14) Week of Year (variable/one hot/cyclic)
+vvv	15) Month of Year (variable/one hot/cyclic)
+  v	16) Weekdays per Month
+  v	17) Public Holidays (API;)
+  	18) Outliers (indicator)
+  v	19) Lagged time-series
+  v	20) Fill NaN (forward, backward, linear interpolation)
+  v	21) String to timestamp

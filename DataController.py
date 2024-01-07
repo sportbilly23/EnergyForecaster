@@ -33,7 +33,8 @@ class DataController:
         self.name = os.path.split(self.path)[-1]
         self._EF.process_controller.processes = processes
         self._EF.process_controller.current_process = None
-        self.current_datasets = DictNoDupl()
+        self._EF.visualizer.datasets = self._EF.statistics.datasets = self._EF.process_controller.datasets = \
+            self._EF.preprocessor.datasets = self.datasets = DictNoDupl()
         self.__check_changes = False
         self.__new_file = False
 
@@ -41,8 +42,6 @@ class DataController:
             os.mkdir(folderpath)
             os.mkdir(os.path.join(folderpath, 'data'))
             os.mkdir(os.path.join(folderpath, 'models'))
-            # self._EF.visualizer.datasets = self._EF.statistics.datasets = self._EF.process_controller.datasets = \
-            #     self._EF.preprocessor.datasets = self.datasets = DictNoDupl()
             with h5py.File(os.path.join(self.path, self.name + '.h5'), 'w') as f:
                 f.attrs[SIGNATURE[0]] = SIGNATURE[1]
 
@@ -185,7 +184,7 @@ class DataController:
         """
         Loads an h5 file to the memory
         :param name: (str) Name of the file to get in memory
-        :return: (None) Put numpy.ndarray in self.current_datasets dictionary
+        :return: (None) Put numpy.ndarray in self.datasets dictionary
         """
         filename = self._check_dataset_name(name)
 
@@ -196,21 +195,21 @@ class DataController:
                                        columns, dtypes, fix_strings=True)
 
         if self.__check_changes:
-            if table.dtype.names != self.current_datasets[name].columns:
+            if table.dtype.names != self.datasets[name].columns:
                 return True
             for col in table.dtype.names:
                 try:
-                    np.testing.assert_equal(self.current_datasets[name][col], table[col])
+                    np.testing.assert_equal(self.datasets[name][col], table[col])
                 except AssertionError:
                     return True
             return False
         else:
-            self.current_datasets.update({name: DTable(table)})
+            self.datasets.update({name: DTable(table, self._EF)})
 
     def set_dataset(self, name, new_name):
         """
         Saves a dataset from memory to a new file
-        :param name: (str) The key of the dataset (name of the h5 file) in self.current_datasets dictionary
+        :param name: (str) The key of the dataset (name of the h5 file) in self.datasets dictionary
         :param new_name: (str) The name for the new h5 file to be created
         :return: (None)
         """
@@ -219,7 +218,7 @@ class DataController:
         new_name = f'{os.path.splitext(os.path.split(new_name)[1])[0]}.h5'
         self._check_dataset_name_availability(new_name)
 
-        self._set_dataset(self.current_datasets[name].data, new_name)
+        self._set_dataset(self.datasets[name].data, new_name)
 
     def update_dataset(self, name):
         """
@@ -236,7 +235,7 @@ class DataController:
     def close_dataset(self, name):
         """
         Removes a dataset from memory
-        :param name: (str) The key of the dataset in self.current_datasets dictionary
+        :param name: (str) The key of the dataset in self.datasets dictionary
         :return: (None)
         """
         _ = self._check_dataset_name(name)
@@ -244,7 +243,7 @@ class DataController:
         if self.dataset_is_changed(name):
             yn = input("Dataset has been changed. Are you sure you want to close it? (Type 'yes' to close): ")
             if yn.upper() == 'YES':
-                self.current_datasets.pop(name)
+                self.datasets.pop(name)
 
     def _set_dataset(self, table, filename):
         """
@@ -350,9 +349,9 @@ class DataController:
 
     def _fix_head_conflicts(self, head):
         """
-        Check about
-        :param head:
-        :return:
+        Check about header conflicts and fix them automatically
+        :param head: (list[str]) List of column names
+        :return: (list[str]) List of fixed column names
         """
         un = 0
         for i, h in enumerate(head):
@@ -369,27 +368,26 @@ class DataController:
 
     def _get_types(self, series):
         """
-
-        :param series:
-        :param accuracy:
-        :return:
+        Defines the dtypes of every column of the csv file
+        :param series: (list[str]) List of strings that came out from a csv file
+        :return: (list[numpy.dtype]) List of dtypes for the columns of the csv file
         """
         return [self._get_type(s) for s in series.T]
 
-    def _cast_string_with_nan(self, ndarray, dtype):
+    def _cast_string_with_nan(self, series, dtype):
         """
-
-        :param ndarray:
-        :param dtype:
-        :return:
+        Converts a series of strings in to the appropriate type with respect to missing values
+        :param series: (list[str]) List of strings represents to be converted
+        :param dtype: (numpy.dtype) The appropriate type for the conversion
+        :return: (numpy.ndarray) Numpy array with the appropriate dtype
         """
-        return np.array([np.nan if i == '' else i for i in ndarray], dtype=dtype)
+        return np.array([np.nan if i == '' else i for i in series], dtype=dtype)
 
     def _get_type(self, series):
         """
-
-        :param series:
-        :return:
+        Select the appropriate dtype for converting a list of strings
+        :param series: (list[str]) List of strings
+        :return: (numpy.dtype) The appropriate dtype for the conversion of the given list of strings
         """
         types = [(np.uint8, np.uint16, np.uint32, np.uint64),
                  (np.int16, np.int32, np.int64),
