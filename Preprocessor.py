@@ -38,6 +38,8 @@ DATE_FORMATS = """\n    %a				Abbreviated weekday name.									Sun, Mon, ...
     %x				Locale’s appropriate date representation.					09/30/13
     %X				Locale’s appropriate time representation.					07:06:05
     %%				A literal '%' character.									%"""
+WRONG_MODE_ERROR = 'Mode selection must be one of "var", "cos-sin" and "one-hot"'
+WEEKDAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 
 
 class Preprocessor:
@@ -206,26 +208,51 @@ class Preprocessor:
 
         return np.array([datetime.datetime.timestamp(d) for d in d_utc], dtype=np.float64)
 
-    def _create_time_indicator(self, data, func, dtype=np.uint8):
+    def _create_indicators(self, data, func, dtype=np.uint8):
+        """
+        Creates indicators for data using a given function. Function used to catch errors in time zones
+        :param data: (numpy.ndarray) Data to be transformed
+        :param func: (func) Function to make the transformation
+        :param dtype: (numpy.dtype) dtype of the returned indicators
+        :return: (numpy.ndarray) Data transformed as indicators
+        """
         try:
-            weekends = np.array([func(d) for d in data], dtype=dtype)
+            indicators = np.array([func(d) for d in data], dtype=dtype)
         except pytz.exceptions.UnknownTimeZoneError:
             raise pytz.exceptions.UnknownTimeZoneError(f'Valid time zones:\n{pytz.all_timezones}')
-        return weekends
+        return indicators
 
     def _create_dummies_array(self, name, number, indicators):
-        dtype = np.uint8 if number < 256 else np.uint16
+        """
+        Create one-hot encoding from a given 1d array of indicators
+        :param name: (str) To name the columns of the table
+        :param number: (int) Number of different indicators
+        :param indicators: (numpy.ndarray) 1d array of indicators
+        :return: (numpy.array) Table with one-hot encoded indicators
+        """
         arr = np.zeros(shape=(indicators.shape[0],),
-                       dtype=list(zip([f'{name}_{d}' for d in range(1, number)], [dtype] * (number - 1))))
+                       dtype=list(zip([f'{name}_{d}' for d in range(1, number)], [np.uint8] * (number - 1))))
         for d in range(1, number):
-            arr[f'{name}_{d}'] = (indicators == d).astype(dtype)
+            arr[f'{name}_{d}'] = (indicators == d).astype(np.uint8)
         return arr
 
     def weekend(self, data, time_zone):
-        return self._create_time_indicator(
+        """
+        Weekday/weekend indicator
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :return: (numpy.ndarray) Weekend indicators
+        """
+        return self._create_indicators(
             data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).weekday() > 4)
 
     def _cos_sin_transformation(self, name, indicators):
+        """
+        Cyclic transformation of indicators (cos/sin)
+        :param name: (str)  To name the columns of the table
+        :param indicators: (numpy.ndarray) 1d array of indicators
+        :return: (numpy.array) Table with cyclic transformed indicators
+        """
         mn = np.nanmin(indicators)
         mx = np.nanmax(indicators)
 
@@ -235,11 +262,15 @@ class Preprocessor:
         cos_sin[f'{name}_cos'] = np.cos(2 * np.pi * (indicators - mn) / (mx - mn))
         return cos_sin
 
-    def _raise_wrong_mode(self):
-        raise KeyError('Mode selection must be one of "var", "cos_sin" and "one-hot"')
-
     def weekday(self, data, time_zone, mode='one-hot'):
-        indicators = self._create_time_indicator(
+        """
+        Weekday indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Weekday indicators
+        """
+        indicators = self._create_indicators(
             data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).weekday())
         if mode == 'one-hot':
             return self._create_dummies_array('weekday', 7, indicators)
@@ -248,10 +279,17 @@ class Preprocessor:
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('weekday', indicators)
         else:
-            self._raise_wrong_mode()
+            raise KeyError(WRONG_MODE_ERROR)
 
     def monthday(self, data, time_zone, mode='one-hot'):
-        indicators = self._create_time_indicator(
+        """
+        Monthday  indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Monthday indicators
+        """
+        indicators = self._create_indicators(
             data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).day)
         if mode == 'one-hot':
             return self._create_dummies_array('monthday', 31, indicators)
@@ -260,15 +298,28 @@ class Preprocessor:
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('monthday', indicators)
         else:
-            self._raise_wrong_mode()
+            raise KeyError(WRONG_MODE_ERROR)
 
     def _calculate_year_day(self, x, time_zone):
+        """
+        Calculates day of the year for a timestamp
+        :param x: (float) Timestamp
+        :param time_zone: (str) Time zone label
+        :return: (int) Day of the year
+        """
         to_ = datetime.datetime.fromtimestamp(x).astimezone(pytz.timezone(time_zone))
         from_ = datetime.datetime(to_.year, 1, 1, 0, 0, 0, 0, to_.tzinfo)
         return (to_ - from_).days + 1
-
+    
     def year_day(self, data, time_zone, mode='one-hot'):
-        indicators = self._create_time_indicator(data, lambda x: self._calculate_year_day(x, time_zone), np.uint16)
+        """
+        Day of year indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Day of year indicators
+        """
+        indicators = self._create_indicators(data, lambda x: self._calculate_year_day(x, time_zone), np.uint16)
         if mode == 'one-hot':
             return self._create_dummies_array('year_day', 365, indicators)
         elif mode == 'var':
@@ -276,9 +327,16 @@ class Preprocessor:
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('year_day', indicators)
         else:
-            self._raise_wrong_mode()
+            raise KeyError(WRONG_MODE_ERROR)
 
     def year_week(self, data, time_zone, mode='one-hot'):
+        """
+        Week of year indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Week of year indicators
+        """
         days = self.weekday(data, time_zone)
         prev_week = week = prev_year = -1
         weeks = []
@@ -300,10 +358,17 @@ class Preprocessor:
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('year_week', indicators)
         else:
-            self._raise_wrong_mode()
+            raise KeyError(WRONG_MODE_ERROR)
 
     def year_month(self, data, time_zone, mode='one-hot'):
-        indicators = self._create_time_indicator(
+        """
+        Month indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Month indicators
+        """
+        indicators = self._create_indicators(
             data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).month)
         if mode == 'one-hot':
             return self._create_dummies_array('year_month', 12, indicators)
@@ -312,9 +377,15 @@ class Preprocessor:
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('year_month', indicators)
         else:
-            self._raise_wrong_mode()
+            raise KeyError(WRONG_MODE_ERROR)
 
     def _count_month_weekdays(self, start):
+        """
+        Counts the number of the seven weedays for a given month (starts to count from given date)
+        :param start: (datetime) A date from when it starts to count (select the 1st day of the month to count month's
+                                 weekdays as a whole)
+        :return: (tuple(int)) Number of the seven differnt weekdays in a month (from given date)
+        """
         current_month = month = start.month
         weekdays = [0, 0, 0, 0, 0, 0, 0]
         while current_month == month:
@@ -324,43 +395,54 @@ class Preprocessor:
         return tuple(weekdays)
 
     def month_weekdays(self, from_year_month, to_year_month):
+        """
+        Creates monthly numbers of weekdays between two dates
+        :param from_year_month: (tuple(int, int)) Starting year and month
+        :param to_year_month:  (tuple(int, int)) Ending year and month
+        :return: (numpy.ndarray) Monthly numbers of weekdays between two dates
+        """
         from_year, from_month = from_year_month
         to_year, to_month = to_year_month
         all_months = (to_year - from_year - 1) * 12 + 13 - from_month + to_month
-        weekdays = np.zeros(shape=(all_months,), dtype=[(str(i), np.uint8) for i in range(7)])
+        weekdays = np.zeros(shape=(all_months,), dtype=[(WEEKDAYS(i), np.uint8) for i in range(7)])
         month = 0
         for current_year in range(from_year, to_year + 1):
-            for current_month in range(from_month if current_year == from_year else 1 , to_month + 1 if current_year == to_year else 13):
+            for current_month in range(from_month if current_year == from_year else 1,
+                                       to_month + 1 if current_year == to_year else 13):
                 weekdays[month] = self._count_month_weekdays(datetime.datetime(current_year, current_month, 1))
                 month += 1
         return weekdays
 
     def _is_in_dates(self, x, dates, time_zone):
+        """
+        Checks if a date x exists in a list of dates
+        :param x: (datetime) The given date
+        :param dates: list(tuples) List of tuples with dates in format (int, int, int) for year, month and day
+        :param time_zone: (str) Time zone label
+        :return: (int) 1 for matching / 0 otherwise
+        """
         dt = datetime.datetime.fromtimestamp(x).astimezone(pytz.timezone(time_zone))
         return int((dt.year, dt.month, dt.day) in dates)
 
     def public_holidays(self, data, holidays, time_zone):
         """
-
-        :param data:
+        Creates one-hot encoding for given list of holidays
+        :param data: (numpy.ndarray) Data to be transformed
         :param holidays: (list(tuple)) List of tuples containing year, month and monthday of holidays
-        :param time_zone:
+        :param time_zone: (str) Time zone label
         :return:
         """
-        return self._create_time_indicator(
+        return self._create_indicators(
             data, lambda x: self._is_in_dates(x, holidays, time_zone))
 
-        # 'https://date.nager.at/api/v3/AvailableCountries'
-        # f'https://date.nager.at/api/v3/PublicHolidays/{year}/{country}'
-        # 'https://date.nager.at/api/v3/LongWeekend/{year}/{country}'
-
-        # hd = []
-        # for i in range(2000, 2023):
-        #     with request.urlopen(f'https://date.nager.at/api/v3/PublicHolidays/{i}/es') as h:
-        #         response = h.read()
-        #     hd += [tuple([int(j) for j in i['date'].split('-')]) for i in json.loads(response)]
-
     def lagged_series(self, data, name, lags=(1,)):
+        """
+        Creates a number of lagged series for the input data
+        :param data: (numpy.ndarray) Data to be transformed
+        :param name: (str) To name the columns of lagged series
+        :param lags: (tuple) Tuple with lags to be created
+        :return: (numpy.ndarray) Lagged series of the data
+        """
         lags = sorted(lags)
         lag_series = np.zeros(shape=(data.shape[0],), dtype=[(f'{name}_lag-{lag}', data.dtype) for lag in lags])
         for lag in lags:
@@ -372,6 +454,11 @@ class Preprocessor:
         return lag_series
 
     def fill_backward(self, data):
+        """
+        Fills nan values with next value
+        :param data: (numpy.ndarray) Data to be transformed
+        :return: (numpy.ndarray) Data with filled the nan values (except last line's nans)
+        """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
         for i, j in reversed(nans):
@@ -382,6 +469,11 @@ class Preprocessor:
         return new_data
 
     def fill_forward(self, data):
+        """
+        Fills nan values with previous value
+        :param data: (numpy.ndarray) Data to be transformed
+        :return: (numpy.ndarray)  (except first line's nans)
+        """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
         for i, j in nans:
@@ -390,6 +482,11 @@ class Preprocessor:
         return new_data
 
     def fill_linear(self, data):
+        """
+        Fills nan values with linear interpolation between previous and next values
+        :param data: (numpy.ndarray) Data to be transformed
+        :return: (numpy.ndarray)  (except first line's nans)
+        """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
         for i, j in nans:
@@ -420,8 +517,8 @@ class Preprocessor:
                     new_data[ci][j] = value
         return new_data
 
-    def fill_periodic(self, data, period=['Annually']):
-        nans = np.argwhere(np.isnan(data))
-        new_data = data.copy()
-        for i, j in nans:
-            pass
+    # def fill_periodic(self, data, period=['Annually']):
+    #     nans = np.argwhere(np.isnan(data))
+    #     new_data = data.copy()
+    #     for i, j in nans:
+    #         pass

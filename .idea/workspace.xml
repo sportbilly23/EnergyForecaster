@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="37c80fc9-0dbf-4a7c-93d2-57f2be670906" name="Changes" comment="Fix Interpreter">
+    <list default="true" id="37c80fc9-0dbf-4a7c-93d2-57f2be670906" name="Changes" comment="Preproccesor modules">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DTable.py" beforeDir="false" afterPath="$PROJECT_DIR$/DTable.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Preprocessor.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Preprocessor.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/Preprocessor.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -30,14 +26,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.EnergyForecaster.executor": "Debug",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.EnergyForecaster.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings>
@@ -98,7 +94,15 @@
       <option name="project" value="LOCAL" />
       <updated>1704091265670</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Fix Interpreter">
+      <option name="closed" value="true" />
+      <created>1704663648003</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1704663648003</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
