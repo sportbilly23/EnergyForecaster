@@ -15,8 +15,23 @@ process_files           Το λεξικό με τα αρχεία τα οποία
 
 Συναρτήσεις
 -----------
-#TODO: Θα μπούνε οι συναρτήσεις που παράγουν στατιστικά
 
-Δημιουργία στιγμιότυπου
------------------------
-#TODO: Πληροφορίες κατασκευαστή
+Statistics
+  R	01)   	Box-Pierce test (portmanteau, αυτοσυσχέτιση υπολειμμάτων)
+  R	02)   	Ljung-Box test (portmanteau, αυτοσυσχέτιση υπολειμμάτων)
+  R	03)   	Breusch-Godfrey test (autocorrelation, αυτοσυσχέτιση υπολειμμάτων, ανάγκη διαφοροποίησης)
+  D	04)  v	KPSS test (unit, ανάγκη διαφοροποίησης)
+  D	05)  v 	ADF test (unit, ανάγκη διαφοροποίησης)
+  D	06)  v	Z-score (outliers)
+  D	07)  v 	Complexity Estimate (predictability)
+  D	08)  v 	Mean Absolute Change (predictability)
+  D	09)  v 	Apprximate Entropy (predictability)
+  D	10)  v 	Pearson Correlation (Συσχέτιση μεταξύ δύο μεταβλητών με κανονική κατανομή)
+  D	11)  v 	Spearman Correlation (Συσχέτιση μεταξύ δύο μεταβλητών με μη κανονική κατανομή)
+  R	12)   	MAPE (metrics) 
+  R	13)   	MAE (metrics)
+  R	14)   	RMSE (metrics)
+  M	15)   	R^2 (metrics)
+  M	16)   	AIC (metrics)
+  M	17)   	AICc (metrics)
+  M	18)   	BIC (metrics)

@@ -1,9 +1,12 @@
+import warnings
 import os
 import h5py
 from DictNoDupl import DictNoDupl
 import numpy as np
-import pickle
+import dill
 from DTable import DTable
+from utils import arrays_are_equal
+
 
 SIGNATURE = ['__SIGNATURE__', 'Energy Forecaster Framework']
 PROCESS_DATASET = '__DATASETS__'
@@ -23,6 +26,8 @@ class DataController:
         "Results".
         """
         self._EF = ef
+        self._INITIAL_ATTRIBUTES = {'scale': None, 'transformations': [], 'units': 'units', 'comments': '',
+                                    'target': False, 'lag': 0}
 
         folderpath = os.path.abspath(folderpath)
 
@@ -31,10 +36,8 @@ class DataController:
 
         self.path = folderpath
         self.name = os.path.split(self.path)[-1]
-        self._EF.process_controller.processes = processes
-        self._EF.process_controller.current_process = None
-        self._EF.visualizer.datasets = self._EF.statistics.datasets = self._EF.process_controller.datasets = \
-            self._EF.preprocessor.datasets = self.datasets = DictNoDupl()
+        self.processes = DictNoDupl(processes)
+        self._EF.process_controller.datasets = self._EF.preprocessor.datasets = self.datasets = DictNoDupl()
         self.__check_changes = False
         self.__new_file = False
 
@@ -45,8 +48,7 @@ class DataController:
             with h5py.File(os.path.join(self.path, self.name + '.h5'), 'w') as f:
                 f.attrs[SIGNATURE[0]] = SIGNATURE[1]
 
-    @staticmethod
-    def _check_filename(folderpath):
+    def _check_filename(self, folderpath):
         """
         Check if path is valid or if there is an old valid instance in the folder
         :param folderpath: (str) Path of new or existing EF
@@ -54,7 +56,7 @@ class DataController:
         """
         path, name = os.path.split(folderpath)
         ef = False
-        processes = []
+        processes = DictNoDupl()
 
         if not os.path.isdir(path):
             raise Exception(f"'{folderpath}' is not a valid path")
@@ -70,7 +72,7 @@ class DataController:
                             raise Exception(f"'{h5}' file is not valid")
                         else:
                             ef = True
-                            processes = list(f.keys())
+                            processes = DictNoDupl({p: self._get_process_by_name(p, f) for p in f.keys()})
 
                 data = os.path.join(path, name, 'data')
                 if not os.path.isdir(data):
@@ -81,6 +83,36 @@ class DataController:
                     raise Exception(f"Not a valid folder ({folderpath}). The 'models' folder is missing.")
 
         return ef, processes
+
+    def _get_process_by_name(self, name, f):
+        """
+        Get process from file by name
+        :param name: (str) Name of the process
+        :param f: (h5py.File) The h5 file
+        :return: (Process) The process from the file
+        """
+        data = DictNoDupl()
+        if 'data' in f[name]:
+            for key in f[name]['data'].keys():
+                data.update({key: f[name]['data'][key][:]})
+        target = DictNoDupl()
+        if 'target' in f[name]:
+            for key in f[name]['target'].keys():
+                target.update({key: f[name]['target'][key][:]})
+        scale = None
+        if 'scale' in f[name]:
+            scale = f[name]['scale'][:]
+        target_length = self.get_attribute_object('target-length', f, name)
+        train = self.get_attribute_object('train', f, name)
+        validation = self.get_attribute_object('validation', f, name)
+        test = self.get_attribute_object('test', f, name)
+        models = self.get_attribute_object('models', f, name)
+        timezone = self.get_attribute_object('timezone', f, name)
+        lags = self.get_attribute_object('lags', f, name)
+        black_lags = self.get_attribute_object('black-lags', f, name)
+        return self._EF.process_controller._process_creation_from_file(name, target, data, scale, timezone, lags,
+                                                                       black_lags, target_length, train, validation,
+                                                                       test, models)
 
     @ staticmethod
     def _check_quotes(quote, split):
@@ -153,7 +185,7 @@ class DataController:
         return [f if full else os.path.splitext(f)[0]
                 for f in os.listdir(os.path.join('e:\\test', 'data')) if f.endswith('.h5')]
 
-    def dataset_is_changed(self, name):
+    def is_dataset_changed(self, name):
         """
         Returns the changing status of a dataset
         :param name: (str) Name of the file (without extension)
@@ -180,7 +212,7 @@ class DataController:
             raise KeyError('No such dataset in the folder')
         return name
 
-    def get_dataset(self, name):
+    def get_dataset(self, name, in_line=False):
         """
         Loads an h5 file to the memory
         :param name: (str) Name of the file to get in memory
@@ -191,20 +223,44 @@ class DataController:
         with h5py.File(os.path.join(self.path, 'data', filename), 'r') as f:
             columns = self.get_attribute_object('columns', f)
             dtypes = self.get_attribute_object('dtypes', f)
-            table = self._create_table(np.hstack([f[col][...].reshape(-1, 1) for col in columns]),
-                                       columns, dtypes, fix_strings=True)
+            attributes = DictNoDupl()
+            for c in columns:
+                attributes.update({c: {i: self.get_attribute_object(i, f, c)
+                                       for i, j in f[c].attrs.items()}})
+
+            table = np.zeros(len(f[columns[0]]), dtypes)
+            for column in columns:
+                table[column] = f[column][...]
+
+            for col in columns:
+                if dtypes[col] == np.object_:
+                    for i, j in enumerate(table[col]):
+                        table[col][i] = j.decode()
 
         if self.__check_changes:
+            # Check column names
             if table.dtype.names != self.datasets[name].columns:
                 return True
+            # Check attributes
+            for col in columns:
+                attrs = self.datasets[name].attributes[col]
+                for attr in attrs:
+                    if attr == 'transformations':
+                        if not arrays_are_equal(self._EF.preprocessor.reverse_trans(table[col],
+                                                                                    attributes[col]['transformations']),
+                                                self.datasets[name].reverse_trans(col)):
+                            return True
+                    else:
+                        if attributes[col][attr] != attrs[attr]:
+                            return True
+            # Check arrays
             for col in table.dtype.names:
-                try:
-                    np.testing.assert_equal(self.datasets[name][col], table[col])
-                except AssertionError:
-                    return True
-            return False
+                return not arrays_are_equal(self.datasets[name][col], table[col])
         else:
-            self.datasets.update({name: DTable(table, self._EF)})
+            if not in_line:
+                self.datasets.update({name: DTable(table, name, attributes, self._EF)})
+            else:
+                return DTable(table, name, attributes, self._EF)
 
     def set_dataset(self, name, new_name):
         """
@@ -222,15 +278,37 @@ class DataController:
 
     def update_dataset(self, name):
         """
-
-        :param name:
-        :return:
+        Updates file with changes have been done in memory
+        :param name: (str) The name of the file
+        :return: (None)
         """
         filename = self._check_dataset_name(name)
 
         with h5py.File(os.path.join(self.path, 'data', filename), 'r+') as f:
-            #TODO: Να ελέγξω για αλλαγές και αν υπάρχουν να κάνω τις αλλαγές στο αρχείο αφού πάρω επιβεβαίωση
-            pass
+            self._set_attribute_object(self.datasets[name].columns, 'columns', f)
+            self._set_attribute_object(self.datasets[name].dtypes, 'dtypes', f)
+
+            for column in [k for k in f.keys() if k not in self.datasets[name].columns]:
+                del f[column]
+
+            for column in self.datasets[name].columns:
+                if column in f.keys() and f[column][:].dtype != self.datasets[name][column].dtype:
+                    del f[column]
+                if column in f.keys():
+                    f[column][:] = self.datasets[name][column]
+                else:
+                    try:
+                        f.create_dataset(column, data=self.datasets[name][column],
+                                         dtype=DTYPES[str(self.datasets[name].data.dtype[column])])
+                    except KeyError:
+                        f.create_dataset(column, data=self.datasets[name][column],
+                                         dtype=self.datasets[name].data.dtype[column])
+
+                for attr in [k for k in f[column].attrs.keys() if k not in self.datasets[name].attributes[column]]:
+                    del f[column].attrs[attr]
+
+                for attr in self.datasets[name].attributes[column]:
+                    self._set_attribute_object(self.datasets[name].attributes[column][attr], attr, f, column)
 
     def close_dataset(self, name):
         """
@@ -240,10 +318,12 @@ class DataController:
         """
         _ = self._check_dataset_name(name)
 
-        if self.dataset_is_changed(name):
+        if self.is_dataset_changed(name):
             yn = input("Dataset has been changed. Are you sure you want to close it? (Type 'yes' to close): ")
             if yn.upper() == 'YES':
                 self.datasets.pop(name)
+        else:
+            self.datasets.pop(name)
 
     def _set_dataset(self, table, filename):
         """
@@ -254,18 +334,15 @@ class DataController:
         """
         with h5py.File(os.path.join(self.path, 'data', filename), 'w') as f:
             self._set_attribute_object(table.dtype.names, 'columns', f)
-            dtypes = [tp[0] for tp in table.dtype.fields.values()]
-            self._set_attribute_object(dtypes, 'dtypes', f)
+            self._set_attribute_object(table.dtype, 'dtypes', f)
 
             for column in table.dtype.names:
                 try:
                     f.create_dataset(column, data=table[column], dtype=DTYPES[str(table.dtype[column])])
                 except KeyError:
                     f.create_dataset(column, data=table[column], dtype=table.dtype[column])
-                self._set_attribute_object(DictNoDupl(), 'scales', f, column)
-                self._set_attribute_object(DictNoDupl(), 'transformations', f, column)
-                self._set_attribute_object(DictNoDupl(), 'units', f, column)
-                self._set_attribute_object(np.array([], dtype='S1'), 'comments', f, column)
+                for attr in self._INITIAL_ATTRIBUTES:
+                    self._set_attribute_object(self._INITIAL_ATTRIBUTES[attr], attr, f, column)
 
     def _set_attribute_object(self, obj, attribute, file, path='/'):
         """
@@ -276,18 +353,20 @@ class DataController:
         :param path: (str) Path in the file
         :return: (None)
         """
-        bts = pickle.dumps(obj)
+        bts = dill.dumps(obj)
         file[path].attrs[attribute] = np.array([b.to_bytes() for b in bts])
 
     def get_attribute_object(self, attribute, f, path='/'):
         """
         Get an object from an attribute in an h5 file
         :param attribute: (str) Name of the attribute
-        :param f: (h5py.File) File where the attribute will be stored
+        :param f: (h5py.File) File where the attribute is stored
         :param path: (str) Path in the file
         :return: (obj) Python object that is stored in a attribute
         """
-        return pickle.loads(b''.join([b'\x00' if i == b'' else i for i in f[path].attrs[attribute]]))
+        return dill.loads(b''.join([b'\x00' if i == b'' else i for i in f[path].attrs[attribute]]))
+
+    # def set_scale
 
     def _create_npstructure(self, splits: list, headline: bool) -> np.ndarray:
         """
@@ -422,3 +501,176 @@ class DataController:
                     continue
 
         return np.dtypes.ObjectDType
+
+    def _set_model(self, name, model, interface):
+        if name not in self.get_model_names():
+            with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
+                dill.dump({'name': name, 'model': model, 'interface': interface}, f)
+        else:
+            raise FileExistsError('Model name already exists')
+
+    def _update_model(self, model):
+        name = model['name']
+        if name in self.get_model_names():
+            with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
+                dill.dump(model, f)
+        else:
+            raise FileExistsError('Model name already exists')
+
+    def _get_model(self, name):
+        with open(os.path.join(self.path, 'models', name + '.pkl'), 'rb') as f:
+            content = dill.load(f)
+        return content
+
+    def get_model_names(self, full=False):
+        """
+        Returns the names of all pkl files in model folder
+        :param full: (bool) True value returns name and extension and False only name
+        :return: (list[str]) Names of h5 files in data folder
+        """
+        return [f if full else os.path.splitext(f)[0]
+                for f in os.listdir(os.path.join('e:\\test', 'models')) if f.endswith('.pkl')]
+
+    def get_process_names(self):
+        """
+        Returns all names of the processes
+        :return: (list(str)) List of names
+        """
+        return list(self.processes.keys())
+
+    def get_process(self, name):
+        """
+        Get process with given name
+        :param name: (str) Name of the process
+        :return: (Process) The process
+        """
+        return self.processes[name]
+
+    def set_process(self, process, update_file=False):
+        """
+
+        :param process:
+        :param update_file:
+        :return:
+        """
+        self.processes.update({process.name: process})
+        if update_file:
+            self.update_process(process)
+
+    def update_process(self, process):
+        """
+        Stores an updated process to the file
+        :param process:
+        :return:
+        """
+        name = process.name
+        with h5py.File(os.path.join(self.path, self.name + '.h5'), 'a') as f:
+            if name not in f:
+                f.create_group(f'{name}')
+
+            if 'data' not in f[name]:
+                f[name].create_group('data')
+            if 'target' not in f[name]:
+                f[name].create_group('target')
+
+            for key in process.data.keys():
+                try:
+                    f[name]['data'].create_dataset(key, data=process.data[key], dtype=process.data[key].dtype)
+                except ValueError:
+                    f[name]['data'][key][:] = process.data[key]
+
+            for key in process.target.keys():
+                try:
+                    f[name]['target'].create_dataset(key, data=process.target[key], dtype=process.target[key].dtype)
+                except ValueError:
+                    f[name]['target'][key][:] = process.target[key]
+
+            try:
+                f[name].create_dataset('scale', data=process.scale, dtype=process.scale.dtype)
+            except ValueError:
+                f[name]['scale'][:] = process.scale
+
+            self._set_attribute_object(process.target_length, 'target-length', f, name)
+            self._set_attribute_object(process.train, 'train', f, name)
+            self._set_attribute_object(process.validation, 'validation', f, name)
+            self._set_attribute_object(process.test, 'test', f, name)
+            self._set_attribute_object(process.models, 'models', f, name)
+            self._set_attribute_object(process.timezone, 'timezone', f, name)
+            self._set_attribute_object(process.lags, 'lags', f, name)
+            self._set_attribute_object(process.black_lags, 'black-lags', f, name)
+
+    def is_process_changed(self, process):
+        """
+        Checks if current process has been changed
+        :param process: (Process) The process to be checked
+        :return: (bool) True if current process have changes between RAM and file.
+        """
+        name = process['name']
+        with h5py.File(os.path.join(self.path, self.name + '.h5'), 'r') as f:
+            proc = self._get_process_by_name(name, f)
+        proc.update({'name': name})
+        return proc != process
+
+    def remove_process(self, name):
+        with h5py.File(os.path.join(self.path, self.name + '.h5'), 'r+') as f:
+            del f[name]
+        self.processes.pop(name)
+
+    def _import_data_to_process(self, dataset, columns, process, change_to_new_tzone=True, no_lags=True):
+        """
+        Imports data in a process. Automatic creation of lagged data with respect in process settings
+        :param dataset: (str) Name of the dataset
+        :param columns: (list(str)) List of columns
+        :param process: (Process) The process where data will be added
+        :param change_to_new_tzone: (bool) If True, it changes the timezone with respect of new data timezone
+        :return: (None)
+        """
+        if dataset in self.datasets and self.is_dataset_changed(dataset):
+            warnings.warn("Dataset has temporary changes that will not be taken into account. You must update the file.")
+        dataset = self.get_dataset(dataset, in_line=True)
+
+        for col in columns:
+            names = dataset[col].dtype.names
+            col_scale = dataset.attributes[col]['scale']
+
+            if not col_scale:
+                raise ValueError(f"Column '{col}' has not a defined scale.")
+
+            if change_to_new_tzone:
+                process.timezone = dataset.attributes[col_scale]['timezone']
+
+            if isinstance(process.scale, type(None)):
+                process.scale = dataset[col_scale]
+            else:
+                if not arrays_are_equal(process.scale, dataset[col_scale]):
+                    scale_format = np.in1d(process.scale, dataset[col_scale])
+                    lst = list(process.data.keys())
+                    for d in lst:
+                        temp = process.data.pop(d)
+                        process.data[d] = temp[scale_format]
+                    process.scale = process.scale[scale_format]
+
+            if dataset.attributes[col]['target']:
+                if names:
+                    for name in names:
+                        process.target.update({f'{col}::{name}': dataset[col][name]})
+                else:
+                    process.target.update({f'{col}': dataset[col]})
+            else:
+
+                lag_cols = dataset.lagged_series(col, col, process.lags) if not no_lags else \
+                    dataset.lagged_series(col, col, [0])
+                for lag, lag_data in zip(process.lags if not no_lags else [0], lag_cols.dtype.names):
+                    if names:
+                        for name in names:
+                            column = f'{col}_lag-{lag}::{name}'
+                            process.data.update({column: lag_cols[lag_data]})  # dataset[col][name][cut - lag: -lag]})
+                            process.attributes.update({column: dataset.attributes[col].copy()})
+                            process.attributes[column]['lag'] = lag
+
+                    else:
+                        column = f'{col}_lag-{lag}'
+                        process.data.update({column: lag_cols[lag_data]})  # dataset[col][cut - lag: -lag]})
+                        process.attributes.update({column: dataset.attributes[col].copy()})
+                        process.attributes[column]['lag'] = lag
+

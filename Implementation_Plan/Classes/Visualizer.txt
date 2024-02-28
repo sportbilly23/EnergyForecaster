@@ -15,6 +15,18 @@ process_files           Το λεξικό με τα αρχεία τα οποία
 
 Συναρτήσεις
 -----------
+
+	01) ACF
+	02) PACF
+	03) Feature (time)
+	04) Feature vs Feature (Scatter)
+	05) Forc. variable vs Scaling Feature(s) (time)
+	06) Forecasts and Prediction Intervals (time)
+	07) Decomposition (Trend/Cycle - Season - Residuals)
+	08) Seasonal (comparison)
+	09) Residuals (time)
+	10) Residuals (histogram)
+	
 #TODO: Θα μπούνε οι συναρτήσεις που δημιουργούν γραφήματα και για τα συνόλα δεδομένων και για τα αποτελεσμάτων των
 #TODO: μοντέλων.
 

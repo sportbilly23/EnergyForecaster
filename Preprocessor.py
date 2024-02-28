@@ -2,6 +2,7 @@ import numpy as np
 import pytz
 from scipy.stats import boxcox
 import datetime
+from utils import calculate_to_date
 DATE_FORMATS = """\n    %a				Abbreviated weekday name.									Sun, Mon, ...
     %A				Full weekday name.											Sunday, Monday, ...
     %w				Weekday as a decimal number.								0, 1, ..., 6
@@ -57,7 +58,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.emath.logn(base, data), lambda x: np.power(10, x)
+        return np.emath.logn(base, data), (lambda x: np.emath.logn(base, x), lambda x: np.power(10, x))
 
     def log2(self, data):
         """
@@ -65,7 +66,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.log2(data), lambda x: np.power(2, x)
+        return np.log2(data), (lambda x: np.log2(x), lambda x: np.power(2, x))
 
     def log10(self, data):
         """
@@ -73,7 +74,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.log10(data), lambda x: np.power(2, x)
+        return np.log10(data), (lambda x: np.log10(x), lambda x: np.power(2, x))
 
     def ln(self, data):
         """
@@ -81,7 +82,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.log(data), lambda x: np.exp(x)
+        return np.log(data), (lambda x: np.log(x), lambda x: np.exp(x))
 
     def exp(self, data):
         """
@@ -89,7 +90,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.exp(data), lambda x: np.log(x)
+        return np.exp(data), (lambda x: np.exp(x), lambda x: np.log(x))
 
     def exp2(self, data):
         """
@@ -97,7 +98,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.exp2(data), lambda x: np.log2(x)
+        return np.exp2(data), (lambda x: np.exp2(x), lambda x: np.log2(x))
 
     def boxcox(self, data, lamda=None):
         """
@@ -109,7 +110,7 @@ class Preprocessor:
         if isinstance(lamda, type(None)):
             bc, lamda = bc
 
-        return boxcox(data, lmbda=lamda), lambda x: (x * lamda + 1) ** (1 / lamda)
+        return boxcox(data, lmbda=lamda), (lambda x: boxcox(x, lamda=lamda), lambda x: (x * lamda + 1) ** (1 / lamda))
 
     def limit_output(self, data, low, hi):
         """
@@ -119,7 +120,8 @@ class Preprocessor:
         :param hi: (float) The higher desired value of the output
         :return: (numpy.ndarray, func) Transformed data and reverse transformation function
         """
-        return np.log((data - low)/(hi - data)), lambda x: (hi - low) * np.exp(x) / (1 + np.exp(x)) + low
+        return np.log((data - low)/(hi - data)), (lambda x: np.log((x - low)/(hi - x)),
+                                                  lambda x: (hi - low) * np.exp(x) / (1 + np.exp(x)) + low)
 
     def minmax(self, data):
         """
@@ -129,7 +131,7 @@ class Preprocessor:
         """
         mn = np.nanmin(data)
         mx = np.nanmax(data)
-        return (data - mn) / (mx - mn), lambda x: x * (mx - mn) + mn
+        return (data - mn) / (mx - mn), (lambda x: (x - mn) / (mx - mn), lambda x: x * (mx - mn) + mn)
 
     def standard(self, data, centered=True, devarianced=True):
         """
@@ -141,7 +143,7 @@ class Preprocessor:
         """
         mn = np.nanmean(data) if centered else 0
         std = np.nanstd(data) if devarianced else 1
-        return (data - mn) / std, lambda x: x * std + mn
+        return (data - mn) / std, (lambda x: (x - mn) / std, lambda x: x * std + mn)
 
     def robust(self, data, centered=True, quantile_range=(.25, .5)):
         """
@@ -156,9 +158,9 @@ class Preprocessor:
         if isinstance(quantile_range, type(None)):
             q = 1
         else:
-            q = np.nanmedian(data, q=quantile_range[1]) - np.quantile(data, q=quantile_range[0])
+            q = np.quantile(data, q=quantile_range[1]) - np.quantile(data, q=quantile_range[0])
 
-        return (data - md) / q, lambda x: x * q + md
+        return (data - md) / q, (lambda x: (x - md) / q, lambda x: x * q + md)
 
     def differenciate(self, data, period=1):
         """
@@ -199,10 +201,14 @@ class Preprocessor:
         """
         try:
             dt = [datetime.datetime.strptime(d, form) for d in data]
-            d_utc = [d.astimezone(pytz.timezone('UTC')) for d in dt]
+            if dt[0].tzinfo:
+                d_utc = [d.astimezone(pytz.timezone('UTC')) for d in dt]
+            else:
+                d_utc = [datetime.datetime(d.year, d.month, d.day, d.hour, d.minute, d.second,
+                                           d.microsecond, pytz.utc) for d in dt]
             deltas = [(d_utc[i + 1] - d_utc[i]).seconds for i in range(len(d_utc) - 1)]
             if len(set(deltas)) > 1:
-                raise ValueError('Converting to UTC created non-periodic intervals')
+                raise Exception('Converting to UTC created non-periodic intervals')
         except ValueError:
             raise ValueError('\n'.join(['Wrong date format', DATE_FORMATS]))
 
@@ -236,6 +242,9 @@ class Preprocessor:
             arr[f'{name}_{d}'] = (indicators == d).astype(np.uint8)
         return arr
 
+    def _time_zone(self, time_zone):
+        return time_zone if time_zone.__class__.__module__ == 'pytz' else pytz.timezone(time_zone)
+
     def weekend(self, data, time_zone):
         """
         Weekday/weekend indicator
@@ -244,7 +253,7 @@ class Preprocessor:
         :return: (numpy.ndarray) Weekend indicators
         """
         return self._create_indicators(
-            data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).weekday() > 4)
+            data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).weekday() > 4)
 
     def _cos_sin_transformation(self, name, indicators):
         """
@@ -271,7 +280,7 @@ class Preprocessor:
         :return: (numpy.array) Weekday indicators
         """
         indicators = self._create_indicators(
-            data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).weekday())
+            data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).weekday())
         if mode == 'one-hot':
             return self._create_dummies_array('weekday', 7, indicators)
         elif mode == 'var':
@@ -283,20 +292,39 @@ class Preprocessor:
 
     def monthday(self, data, time_zone, mode='one-hot'):
         """
-        Monthday  indicators/one-hot encoding/cyclical encoding
+        Monthday indicators/one-hot encoding/cyclical encoding
         :param data: (numpy.ndarray) Data to be transformed
         :param time_zone: (str) Time zone label
         :param mode: (str) "var"/"one-hot"/"cos-sin"
         :return: (numpy.array) Monthday indicators
         """
         indicators = self._create_indicators(
-            data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).day)
+            data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).day)
         if mode == 'one-hot':
             return self._create_dummies_array('monthday', 31, indicators)
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
             return self._cos_sin_transformation('monthday', indicators)
+        else:
+            raise KeyError(WRONG_MODE_ERROR)
+
+    def day_hour(self, data, time_zone, mode='one-hot'):
+        """
+        Day hour indicators/one-hot encoding/cyclical encoding
+        :param data: (numpy.ndarray) Data to be transformed
+        :param time_zone: (str) Time zone label
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Monthday indicators
+        """
+        indicators = self._create_indicators(
+            data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).hour)
+        if mode == 'one-hot':
+            return self._create_dummies_array('day_hour', 24, indicators)
+        elif mode == 'var':
+            return indicators
+        elif mode == 'cos-sin':
+            return self._cos_sin_transformation('day_hour', indicators)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -307,7 +335,7 @@ class Preprocessor:
         :param time_zone: (str) Time zone label
         :return: (int) Day of the year
         """
-        to_ = datetime.datetime.fromtimestamp(x).astimezone(pytz.timezone(time_zone))
+        to_ = datetime.datetime.fromtimestamp(x).astimezone(self._time_zone(time_zone))
         from_ = datetime.datetime(to_.year, 1, 1, 0, 0, 0, 0, to_.tzinfo)
         return (to_ - from_).days + 1
     
@@ -341,7 +369,7 @@ class Preprocessor:
         prev_week = week = prev_year = -1
         weeks = []
         for day_i, date_j in zip(days[1:], data):
-            current_year = datetime.datetime.fromtimestamp(date_j).astimezone(pytz.timezone(time_zone)).year
+            current_year = datetime.datetime.fromtimestamp(date_j).astimezone(self._time_zone(time_zone)).year
             if current_year != prev_year:
                 prev_year = current_year
                 week = 1
@@ -369,7 +397,7 @@ class Preprocessor:
         :return: (numpy.array) Month indicators
         """
         indicators = self._create_indicators(
-            data, lambda x: datetime.datetime.fromtimestamp(x, tz=pytz.timezone(time_zone)).month)
+            data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).month)
         if mode == 'one-hot':
             return self._create_dummies_array('year_month', 12, indicators)
         elif mode == 'var':
@@ -421,7 +449,7 @@ class Preprocessor:
         :param time_zone: (str) Time zone label
         :return: (int) 1 for matching / 0 otherwise
         """
-        dt = datetime.datetime.fromtimestamp(x).astimezone(pytz.timezone(time_zone))
+        dt = datetime.datetime.fromtimestamp(x).astimezone(self._time_zone(time_zone))
         return int((dt.year, dt.month, dt.day) in dates)
 
     def public_holidays(self, data, holidays, time_zone):
@@ -430,7 +458,7 @@ class Preprocessor:
         :param data: (numpy.ndarray) Data to be transformed
         :param holidays: (list(tuple)) List of tuples containing year, month and monthday of holidays
         :param time_zone: (str) Time zone label
-        :return:
+        :return: (numpy.ndarray) One-hot encoding for national holidays
         """
         return self._create_indicators(
             data, lambda x: self._is_in_dates(x, holidays, time_zone))
@@ -450,7 +478,10 @@ class Preprocessor:
             try:
                 lag_series[f'{name}_lag-{lag}'][:lag] = ''
             except ValueError:
-                lag_series[f'{name}_lag-{lag}'][:lag] = np.nan
+                try:
+                    lag_series[f'{name}_lag-{lag}'][:lag] = np.nan
+                except ValueError:
+                    lag_series[f'{name}_lag-{lag}'][:lag] = -1
         return lag_series
 
     def fill_backward(self, data):
@@ -461,9 +492,9 @@ class Preprocessor:
         """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
-        for i, j in reversed(nans):
+        for i in reversed(nans):
             try:
-                new_data[i][j] = new_data[i + 1][j]
+                new_data[i] = new_data[i + 1]
             except IndexError:
                 continue
         return new_data
@@ -472,33 +503,34 @@ class Preprocessor:
         """
         Fills nan values with previous value
         :param data: (numpy.ndarray) Data to be transformed
-        :return: (numpy.ndarray)  (except first line's nans)
+        :return: (numpy.ndarray) Data with filled the nan values (except first line's nans)
         """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
-        for i, j in nans:
+        for i in nans:
             if i > 0:
-                new_data[i][j] = new_data[i - 1][j]
+                new_data[i] = new_data[i - 1]
         return new_data
 
     def fill_linear(self, data):
         """
         Fills nan values with linear interpolation between previous and next values
         :param data: (numpy.ndarray) Data to be transformed
-        :return: (numpy.ndarray)  (except first line's nans)
+        :return: (numpy.ndarray) Data with filled the nan values
         """
         nans = np.argwhere(np.isnan(data))
         new_data = data.copy()
-        for i, j in nans:
-            if np.isnan(new_data[i][j]):
-                next_i = i + 1
+        for i in nans:
+            int_i = int(i)
+            if np.isnan(new_data[i]):
+                next_i = int_i + 1
                 try:
-                    while np.isnan(new_data[next_i][j]):
+                    while np.isnan(new_data[next_i]):
                         next_i += 1
                 except IndexError:
                     next_i = -1
                 if i > 0:
-                    prev_i = i - 1
+                    prev_i = int_i - 1
                 else:
                     prev_i = -1
 
@@ -506,16 +538,107 @@ class Preprocessor:
                     raise ValueError('There is a full nan column')
                 elif prev_i == -1:
                     ii = range(0, next_i)
-                    values = np.linspace(new_data[next_i][j], new_data[next_i][j], next_i + 2)[1:-1]
+                    values = np.linspace(new_data[next_i], new_data[next_i], next_i + 2)[1:-1]
                 elif next_i == -1:
-                    ii = range(i, data.shape[0])
-                    values = np.linspace(new_data[prev_i][j], new_data[prev_i][j], data.shape[0] - i + 2)[1:-1]
+                    ii = range(int_i, data.shape[0])
+                    values = np.linspace(new_data[prev_i], new_data[prev_i], data.shape[0] - int_i + 2)[1:-1]
                 else:
-                    ii = range(i, next_i + 1)
-                    values = np.linspace(new_data[prev_i][j], new_data[next_i][j], next_i - i + 2)[1:-1]
+                    ii = range(int_i, next_i + 1)
+                    values = np.linspace(new_data[prev_i], new_data[next_i], next_i - int_i + 2)[1:-1]
                 for ci, value in zip(ii, values):
-                    new_data[ci][j] = value
+                    new_data[ci] = value
         return new_data
+
+    def _date_mask(self, scale, from_date, to_date, tz):
+        """
+        Create a boolean series (smart index) to use it for time interval selection
+        :param scale: (numpy.ndarray) Time scale for the creation of smart index
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param tz: (pytz.timezone) Timezone of the scale
+        :return: (list) Smart index for given time interval selection
+        """
+        try:
+            to_date = calculate_to_date(to_date)
+            from_date = datetime.datetime(*from_date, tzinfo=tz).timestamp()
+            to_date = datetime.datetime(*to_date, tzinfo=tz).timestamp()
+            ln = len(scale)
+            scale_tf_1 = [s >= from_date for s in scale] if from_date else [True] * ln
+            scale_tf_2 = [s <= to_date for s in scale] if to_date else [True] * ln
+        except TypeError:
+            return [True] * len(scale)
+        return [i & j for i, j in zip(scale_tf_1, scale_tf_2)]
+
+    def _timestamps_to_dates(self, timestamps, tz=None, freq='microsecond'):
+        """
+        Creates datetimes from timestamps with respect of the selected frequency
+        :param timestamps: (numpy.ndarray) Timestamps
+        :param tz: (pytz.timezone) Timezone
+        :param freq: (str) The selected frequency to categorize the timestamps
+        :return: (numpy.ndarray) Categorized datetimes with respect of given frequency
+        """
+        periods = {'year': 0, 'month': 1, 'week': 2, 'day': 3, 'hour': 4, 'minute': 5, 'second': 6, 'microsecond': 7}
+        dates = []
+
+        for s in timestamps:
+            s = datetime.datetime.fromtimestamp(s, tz=tz)
+            dates.append(datetime.datetime(s.year,
+                                           s.month if periods[freq] > 0 else 0,
+                                           s.day if periods[freq] > 1 else 1,
+                                           s.hour if periods[freq] > 3 else 0,
+                                           s.minute if periods[freq] > 4 else 0,
+                                           s.second if periods[freq] > 5 else 0,
+                                           s.microsecond if periods[freq] > 6 else 0,
+                                           s.tzinfo))
+
+        if freq == 'week':
+            for i, date in enumerate(dates):
+                isocal = date.isocalendar()[:2]
+                dates[i] = isocal if date.year == isocal[0] else (date.year, 0)
+            dates = np.array(dates, dtype=[('year', np.int16), ('week', np.int16)])
+        else:
+            dates = np.array(dates)
+        return dates
+
+    def downgrade_data_frequency(self, data, scale, freq, from_date, to_date, tz=None, func=np.sum):
+        """
+        Change frequency of data in a given time interval
+        :param data: (numpy.ndarray) Data to be used
+        :param scale: (numpy.ndarray) Time scale of the given data
+        :param freq: (str) Frequency to categorize data
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param tz: (pytz.timezone) Timezone
+        :param func: (func) Function to use in categorized data
+        :return: (numpy.ndarray, numpy.ndarray) categorized data and new scale
+        """
+        lmbd = lambda x: func(x)
+
+        date_mask = self._date_mask(scale, from_date, to_date, tz)
+
+        scale = scale[date_mask]
+        data = data[date_mask]
+
+        dates = self._timestamps_to_dates(scale, tz, freq)
+        set_dates = sorted(set(dates.tolist()))
+
+        if freq == 'week':
+            return np.array([lmbd(data[dates == d]) for d in np.array(set_dates, dtype=dates.dtype)]), set_dates
+        else:
+            return np.array([lmbd(data[dates == d]) for d in set_dates]), set_dates
+
+    def reverse_trans(self, data, trans_list):
+        """
+        Reverse transformation of data using a transformation list
+        :param data: (numpy.ndarray) Data to be back-transformed
+        :param trans_list: (list(dict)) Transformation list (with dicts {'func': func(), 'rev': rev()})
+        :return: (numpy.ndarray) Back-transformed data
+        """
+        rev_data = data.copy()
+        for trans in trans_list:
+            rev_data = trans['rev'](rev_data)
+
+        return rev_data
 
     # def fill_periodic(self, data, period=['Annually']):
     #     nans = np.argwhere(np.isnan(data))

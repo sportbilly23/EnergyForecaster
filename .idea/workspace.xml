@@ -4,14 +4,40 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="37c80fc9-0dbf-4a7c-93d2-57f2be670906" name="Changes" comment="Preproccesor modules">
+    <list default="true" id="37c80fc9-0dbf-4a7c-93d2-57f2be670906" name="Changes" comment="Preproccesor functions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DTable.py" beforeDir="false" afterPath="$PROJECT_DIR$/DTable.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Preprocessor.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Preprocessor.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Statistics.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Statistics.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/StatsD.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/StatsData.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/StatsR.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/StatsResults.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/VisD.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/VisualizeData.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/VisR.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/VisualizeResults.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/Preprocessor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProcessController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ProcessController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Statistics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statistics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StatsD.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StatsR.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/VisD.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/VisR.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Visualizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Visualizer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -29,8 +55,11 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Python.EnergyForecaster.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.encrysb_v1.executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/V_Kon/OneDrive/EnergyForecaster&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
@@ -41,7 +70,7 @@
       </console-settings>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.EnergyForecaster">
     <configuration name="EnergyForecaster" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EnergyForecaster" />
       <option name="ENV_FILES" value="" />
@@ -64,16 +93,39 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="encrysb_v1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="EnergyForecaster" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../encrysb" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../encrysb/encrysb_v1.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.EnergyForecaster" />
+        <item itemvalue="Python.encrysb_v1" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-50da183f06c8-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13135.95" />
+        <option value="bundled-python-sdk-d68999036c7f-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.14475.56" />
       </set>
     </attachedChunks>
   </component>
@@ -102,7 +154,15 @@
       <option name="project" value="LOCAL" />
       <updated>1704663648003</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Preproccesor functions">
+      <option name="closed" value="true" />
+      <created>1704797984152</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1704797984152</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -118,17 +178,30 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Fix Interpreter" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix Interpreter" />
+    <MESSAGE value="Preproccesor functions" />
+    <option name="LAST_COMMIT_MESSAGE" value="Preproccesor functions" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/DTable.py</url>
+          <line>507</line>
+          <option name="timeStamp" value="131" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>45</line>
-          <option name="timeStamp" value="2" />
+          <line>113</line>
+          <option name="timeStamp" value="159" />
         </line-breakpoint>
       </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
     </breakpoint-manager>
   </component>
 </project>

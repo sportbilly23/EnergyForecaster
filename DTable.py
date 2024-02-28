@@ -1,15 +1,24 @@
 import numpy as np
-from Preprocessor import Preprocessor
+import datetime
+import pytz
+from utils import calculate_to_date
 
 
 class DTable:
     """
     Table that holds the data of an EF file and outputs graphs and statistics.
     """
-    def __init__(self, data, _EF):
-        self.data = np.array(data)
-        self.columns = self.data.dtype.names
-        self.preprocessor = _EF.preprocessor
+    def __init__(self, data, name, attributes, _EF):
+        self._INITIAL_ATTRIBUTES = _EF.data_controller._INITIAL_ATTRIBUTES
+        self.name = name
+        self.data = None
+        self.columns = None
+        self.dtypes = None
+        self.attributes = attributes
+        self._update_data(np.array(data))
+        self._preprocessor = _EF.preprocessor
+        self._visualizer = _EF.data_visualizer
+        self._stats = _EF.data_statistics
 
     def __repr__(self):
         return repr(self.data)
@@ -18,31 +27,922 @@ class DTable:
         return self.data.__getitem__(item)
 
     # TODO: Θα μπούνε οι συναρτήσεις που δημιουργούν γραφήματα, στατιστικά και μετατροπές για δεδομένα ενός πίνακα
-    def log(self, base, column):
-        return self.preprocessor.log(base, self.data[column])
+    def log(self, base, column, assign=None):
+        """
+        Data logarithmic transformation
+        :param base: (int) Base of the logarithm transformation
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.log(base, self.data[column]),
+                             assign)
 
-    def log2(self, column):
-        return self.preprocessor.log2(self.data[column])
+    def log2(self, column, assign=None):
+        """
+        Data binary logarithmic transformation (base 2)
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.log2(self.data[column]),
+                             assign)
 
-    def log10(self, column):
-        return self.preprocessor.log10(self.data[column])
+    def log10(self, column, assign=None):
+        """
+        Data common logarithmic transformation (base 10)
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.log10(self.data[column]),
+                             assign)
 
-    def ln(self, column):
-        return self.preprocessor.ln(self.data[column])
+    def ln(self, column, assign=None):
+        """
+        Data natural logarithmic transformation (base e)
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.ln(self.data[column]),
+                             assign)
 
-    def exp(self, column):
-        return self.preprocessor.exp(self.data[column])
+    def exp(self, column, assign=None):
+        """
+        Data natural exponential transformation (base e)
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.exp(self.data[column]),
+                             assign)
 
-    def exp2(self, column):
-        return self.preprocessor.exp2(self.data[column])
+    def exp2(self, column, assign=None):
+        """
+        Data binary exponential transformation (base 2)
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.exp2(self.data[column]),
+                             assign)
 
-    def boxcox(self, column, lamda):
-        return self.preprocessor.boxcox(self.data[column], lamda)
+    def boxcox(self, column, lamda=None, assign=None):
+        """
+        Box-Cox transformation with lambda parameter
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.boxcox(self.data[column], lamda),
+                             assign)
 
-    def minmax(self, column):
-        return self.preprocessor.minmax(self.data[column])
+    def minmax(self, column, assign=None):
+        """
+        Min-Max normalization
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.minmax(self.data[column]),
+                             assign)
 
-    def standard(self, column, centered=True, devarianced=True):
-        return self.preprocessor.standard(self.data[column], centered=centered, devarianced=devarianced)
+    def standard(self, column, centered=True, devarianced=True, assign=None):
+        """
+        Standard normalization
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param centered: (bool) Subtracks mean value to center transformed data on axes
+        :param devarianced: (bool) Divides by standard deviation to de-variance transformed data
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.standard(self.data[column], centered=centered, devarianced=devarianced),
+                             assign)
 
+    def robust(self, column, centered=True, quantile_range=(.25, .75), assign=None):
+        """
+        Robust normalization
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param centered: (bool) Subtracks median value to center transformed data on axes
+        :param quantile_range: (tuple(float)) Defines quantiles to de-variance transformed data
+        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
+        """
+        return self._inplace(column,
+                             self._preprocessor.robust(self.data[column], centered=centered,
+                                                       quantile_range=quantile_range),
+                             assign)
 
+    def differenciate(self, column, period=1, assign=None):
+        """
+        Differentiate data
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param period: (int) Period of the differantiation
+        :return: (numpy.ndarray) Transformed data
+        """
+        return self._inplace(column,
+                             self._preprocessor.differenciate(self.data[column], period=period),
+                             assign)
+
+    def croston_method(self, column, assign=None):
+        """
+        Transform sparse series to inter-arrival/quantity series
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray) Transformed data
+        """
+        return self._inplace(column,
+                             self._preprocessor.croston_method(self.data[column]),
+                             assign)
+
+    def _get_tzinfo(self, tzone):
+        """
+        Gets tzinfo from a timezone
+        :param tzone: (str) Timezone label (eg. 'Europe/Athens')
+        :return: (DstTzInfo) Timezone Info
+        """
+        return datetime.datetime.now(pytz.timezone(tzone)).tzinfo
+
+    def to_timestamp(self, column, form, tzone, assign=None, make_scale=True):
+        """
+        Transforms strings of dates to timestamps
+        :param column: (str) The label of the DTable's column to be transformed
+        :param form: (str) Format of string data
+        :param tzone: (str) Timezone label (eg. 'Europe/Athens')
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param make_scale: (bool) True to define it as scale
+        :return: (numpy.ndarray) Transformed data - Timestamps
+        """
+        if make_scale:
+            self.attributes[column].update({'is_scale': True})
+            self.attributes[column].update({'timezone': self._get_tzinfo(tzone)})
+        return self._inplace(column,
+                             self._preprocessor.to_timestamp(self.data[column], form),
+                             assign)
+
+    def weekend(self, column, assign=None):
+        """
+        Weekday/weekend indicator
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray) Weekend indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.weekend(self.data[column], self.attributes[column]['timezone']),
+                             assign)
+
+    def weekday(self, column, mode='one-hot', assign=None):
+        """
+        Weekday indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Weekday indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.weekday(self.data[column],
+                                                        self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def monthday(self, column, mode='one-hot', assign=None):
+        """
+        Monthday indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Monthday indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.monthday(self.data[column],
+                                                         self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def day_hour(self, column, mode='one-hot', assign=None):
+        """
+        Day hour indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Monthday indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.day_hour(self.data[column],
+                                                         self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def year_day(self, column, mode='one-hot', assign=None):
+        """
+        Day of year indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Day of year indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.year_day(self.data[column],
+                                                         self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def year_week(self, column, mode='one-hot', assign=None):
+        """
+        Week of year indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Week of year indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.year_week(self.data[column],
+                                                          self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def year_month(self, column, mode='one-hot', assign=None):
+        """
+        Month indicators/one-hot encoding/cyclical encoding
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param mode: (str) "var"/"one-hot"/"cos-sin"
+        :return: (numpy.array) Month indicators
+        """
+        return self._inplace(column,
+                             self._preprocessor.year_month(self.data[column],
+                                                           self.attributes[column]['timezone'], mode=mode),
+                             assign)
+
+    def month_weekdays(self, from_year_month, to_year_month, assign=None):
+        """
+        Creates monthly numbers of weekdays between two dates
+        :param from_year_month: (tuple(int, int)) Starting year and month
+        :param to_year_month:  (tuple(int, int)) Ending year and month
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray) Monthly numbers of weekdays between two dates
+        """
+        return self._inplace(None,
+                             self._preprocessor.month_weekdays(self, from_year_month, to_year_month),
+                             assign)
+
+    def public_holidays(self, column, holidays, assign=None):
+        """
+        Creates one-hot encoding for given list of holidays
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param holidays: (list(tuple)) List of tuples containing year, month and monthday of holidays
+        :return:(numpy.ndarray) One-hot encoding for national holidays
+        """
+        return self._inplace(column,
+                             self._preprocessor.public_holidays(self.data[column], holidays,
+                                                                self.attributes[column]['timezone']),
+                             assign)
+
+    def lagged_series(self, column, name, lags=(1,), assign=None):
+        """
+        Creates a number of lagged series for the input data
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :param name: (str) To name the columns of lagged series
+        :param lags: (tuple) Tuple with lags to be created
+        :return: (numpy.ndarray) Lagged series of the data
+        """
+        lag_data = self._inplace(column,
+                                 self._preprocessor.lagged_series(self.data[column], name, lags=lags),
+                                 assign, True)
+        if assign in ['add', 'inplace']:
+            if assign == 'add':
+                column = lag_data
+            self.attributes[column]['lag'] = lags
+            return None
+
+        return lag_data
+
+    def fill_backward(self, column, assign=None):
+        """
+        Fills nan values with next value
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray) Data with filled the nan values (except last line's nans)
+        """
+        return self._inplace(column,
+                             self._preprocessor.fill_backward(self.data[column]),
+                             assign)
+
+    def fill_forward(self, column, assign=None):
+        """
+        Fills nan values with previous value
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray)  (except first line's nans)
+        """
+        return self._inplace(column,
+                             self._preprocessor.fill_forward(self.data[column]),
+                             assign)
+
+    def fill_linear(self, column, assign=None):
+        """
+        Fills nan values with linear interpolation between previous and next values
+        :param column: (str) The label of the DTable's column to be transformed
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray)  (except first line's nans)
+        """
+        return self._inplace(column,
+                             self._preprocessor.fill_linear(self.data[column]),
+                             assign)
+
+    def _random_name(self, name, columns):
+        """
+        Creates name for added column so there are no conflicts with current dataset columns
+        :param name: (str) Proposed name
+        :param columns: list(str) Current column names
+        :return: (str) Name for the new column
+        """
+        new_name = name
+        while new_name in columns:
+            new_name = f'{name}_{np.random.randint(int(1e8), int(1e9))}'
+        return new_name
+
+    def _inplace(self, column, data, assign, return_new_name=False):
+        """
+        Controls column replacement and addition for new transformations
+        :param column: (str) Label of the transformed column
+        :param data: (numpy.ndarray) New, transformed column(s) to be added to the dataset
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray, func) Returns the transformed data and (if possible) the reversed function
+        """
+        if isinstance(data, tuple):
+            data, funcs = data
+        else:
+            funcs = None
+
+        if assign in ['inplace', 'add']:
+
+            new_column = self._random_name(column, self.columns) if assign == 'add' else column
+
+            dtype = [(i, self.data.dtype[i]) for i in self.data.dtype.names
+                     if not (assign == 'inplace' and i == column)]
+
+            dtype.append((new_column, data.dtype))
+
+            temp = np.zeros(shape=self.data.shape, dtype=dtype)
+            for c in temp.dtype.names:
+                if c == new_column:
+                    temp[c] = data
+                else:
+                    temp[c] = self.data[c]
+
+            if new_column not in self.attributes:
+                if funcs:
+                    self.attributes.update({new_column: self.attributes[column]})
+                else:
+                    self.attributes.update({new_column: self._INITIAL_ATTRIBUTES})
+
+            if funcs:
+                self.attributes[new_column]['transformations'].append(dict(zip(('func', 'rev'), funcs)))
+            else:
+                self.attributes[new_column]['transformations'] = []
+
+            self._update_data(temp)
+            if return_new_name and assign == 'add':
+                return new_column
+        else:
+            return (data, funcs) if funcs else data
+
+    def _update_data(self, data):
+        """
+        Updates data, columns and dtypes of them
+        :param data: (numpy.ndarray) New data
+        :return: (None)
+        """
+        self.data = data
+        self.columns = self.data.dtype.names
+        self.dtypes = data.dtype
+        attributes_to_remove = [a for a in self.attributes if a not in self.columns]
+        for attr in attributes_to_remove:
+            self.attributes.pop(attr)
+
+    def make_scale(self, column, tzone=None):
+        """
+        Defines column as scale
+        :param column: (str) Label of th column to define as scale
+        :param tzone: (str) Timezone label (eg. 'Europe/Athens')
+        :return: (None)
+        """
+        self.attributes[column].update({'is_scale': True})
+        self.attributes[column].update({'scale': None})
+        if tzone:
+            self.attributes[column].update({'timezone': self._get_tzinfo(tzone)})
+
+    def is_scale(self, column):
+        """
+        Checks if a column is scale
+        :param column: (str) Label of th column to define as scale
+        :return: (bool) True if a column is scale
+        """
+        return 'is_scale' in self.attributes[column] and self.attributes[column]['is_scale']
+
+    def attach_scale(self, column, scale):
+        """
+        Attach a scale to a column
+        :param column: (str) Label of the column to attach a scale
+        :param scale: (str) Label of the scale column
+        :return: (None)
+        """
+        if self.is_scale(scale) and not self.is_scale(column):
+            self.attributes[column]['scale'] = scale
+        else:
+            raise ValueError('Method attach_scale needs a scale column to be attached to a non-scale column.')
+
+    def make_target(self, column, disable=False):
+        """
+        Defines column as target
+        :param column: (str) Label of the column to define as target
+        :param disable: (bool) True for removing column from target
+        :return: (None)
+        """
+        self.attributes[column].update({'target': not disable})
+
+    def detach_scale(self, column):
+        """
+        Detach scale from a column
+        :param column: (str) Label of the column to detach scale
+        :return: (None)
+        """
+        self.attributes[column]['scale'] = None
+
+    def set_units(self, column, string):
+        """
+        Define the measurement units of a column
+        :param column: (str) Label of the column
+        :param string: (srt) Measurement units of a column
+        :return: (None)
+        """
+        if not string:
+            string = 'units'
+        self.attributes[column]['units'] = str(string)
+
+    def clear_comments(self, column):
+        """
+        Clears comments of a column
+        :param column: (str) Label of the column to attach a scale
+        :return: (None)
+        """
+        self.attributes[column]['comments'] = ''
+
+    def add_comments(self, column, string):
+        """
+        Add a line to the comments of a column
+        :param column: (str) Label of the column
+        :param string: (str) Comment to be added to column's comments
+        :return: (None)
+        """
+        comments = self.attributes[column]['comments']
+        self.attributes[column]['comments'] = '\n'.join([comments, string]).strip('\n')
+
+    def reverse_trans(self, column):
+        """
+        Returns data applying reverse transformation functions
+        :param column: (str) Label of the column
+        :return: (numpy.ndarray) Initial data of a column (before transformations)
+        """
+        # current_values = self.data[column].copy()
+        # for trans in self.attributes[column]['transformations']:
+        #     current_values = trans['rev'](current_values)
+        return self._preprocessor.reverse_trans(self.data[column], self.attributes[column]['transformations'])
+
+    def kpss(self, column, nlags='auto', regression='c'):
+        """
+        Kwiatkowski-Phillips-Schmidt-Shin (KPSS) unit root test from statsmodels module
+        :param column: (str) Label of the column
+        :param nlags: (int) Number of lags to be used
+        :param regression: (str) The null hypothesis for the KPSS test ('c', 'ct')
+        :return: (list) KPSS test results from statsmodels module
+        """
+        return self._stats.kpss(self.data[column], nlags=nlags, regression=regression)
+
+    def adf(self, column, maxlag=None, regression='c', autolag='AIC'):
+        """
+        Augmented Dickey-Fuller unit root test from statsmodels module
+        :param column: (str) Label of the column
+        :param maxlag: (int) Maximum lag which is included in test
+        :param regression: (str) Constant and trend order to include in regression ('c', 'ct', 'ctt', 'n')
+        :param autolag: (str) Method to use when automatically determining the lag length ('AIC', 'BIC', 't-stat', None)
+        :return: (list) ADF test results from statsmodels module
+        """
+        return self._stats.adf(self.data[column], maxlag=maxlag, regression=regression, autolag=autolag)
+
+    def pearson_correlation(self, column_a, column_b):
+        """
+        Returns Pearson correlation for the data of the two inserted columns
+        :param column_a: (str) Label of the first column
+        :param column_b: (str) Label of the second column
+        :return: (float) Pearson correlation for the data of the two inserted columns
+        """
+        return self._stats.pearson_correlation(self.data[column_a], self.data[column_b])
+
+    def spearman_correlation(self, column_a, column_b):
+        """
+        Returns Spearman correlation for the data of the two inserted columns
+        :param column_a: (str) Label of the first column
+        :param column_b: (str) Label of the second column
+        :return: (float) Spearman correlation for the data of the two inserted columns
+        """
+        return self._stats.spearman_correlation(self.data[column_a], self.data[column_b])
+
+    def zscore(self, column):
+        """
+        Calculates Z-score for the data of a column
+        :param column: (str) Label of the column
+        :return: (numpy.ndarray) Z-score for the data of the inserted column
+        """
+        return self._stats.zscore(self.data[column])
+
+    def complexity_estimate(self, column):
+        """
+        Calculates Complexity Estimation
+        :param column: (str) Label of the column
+        :return: (float) Complexity Estimation
+        """
+        return self._stats.complexity_estimate(self.data[column])
+
+    def mean_absolute_change(self, column):
+        """
+        Calculates Mean Absolute Change
+        :param column: (str) Label of the column
+        :return: (float) Mean Absolute Change
+        """
+        return self._stats.mean_absolute_change(self.data[column])
+
+    def approximate_entropy(self, column, window: int, level: float):
+        """
+        Calculates Approximate Entropy
+        :param column: (str) Label of the column
+        :param window: (int) Length of a run of data
+        :param level: (float) Filtering level
+        :return: (float) Approximate Entropy
+        """
+        return self._stats.approximate_entropy(self.data[column], window=window, level=level)
+
+    def mean(self, column, reverse_trans=True):
+        """
+
+        :param column: (str) Label of the column
+        :param reverse_trans: (bool) Calculate on reverse transformed data
+        :return: (float) Mean of the data
+        """
+        return self._stats.mean(self.reverse_trans(column) if reverse_trans else self.data[column])
+
+    def std(self, column, dof=1, reverse_trans=True):
+        """
+        Returns the standard deviation of the data
+        :param column: (str) Label of the column
+        :param dof: (int) Degrees of freedom to use for the calculations
+        :param reverse_trans: (bool) Calculate on reverse transformed data
+        :return: (float) Standard deviation of the data
+        """
+        return self._stats.std(self.reverse_trans(column) if reverse_trans else self.data[column], dof=dof)
+
+    def get_units(self, column):
+        """
+        Returns the units of a column with respect of transformations
+        :param column: (str) Label of the column
+        :return: (str) Units of a column with respect of transformations
+        """
+        units = self.attributes[column]['units']
+        for trans_dict in self.attributes[column]['transformations']:
+            trans = str(trans_dict['func'])
+            units = f'{trans[trans.index('Preprocessor.') + 13: trans.index('<locals>') - 1]}({units})'
+        return units
+
+    def scatter(self, column_1, column_2, reverse_transform=True, axes=False):
+        """
+        Creates scatter-plot to visualize correlation between columns
+        :param column_1: (str) Label of one column
+        :param column_2: (str) Label of a second column
+        :param reverse_transform: (bool) Plot with reverse transformed data
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        if self._compatible_data([column_1, column_2]) and self._no_scale_in_data([column_1, column_2]):
+            if reverse_transform:
+                return self._visualizer.scatter(self.reverse_trans(column_1), self.reverse_trans(column_2),
+                                                {1: column_1, 2: column_2},
+                                                {1: self.attributes[column_1]['units'],
+                                                 2: self.attributes[column_2]['units']},
+                                                axes=axes)
+            else:
+                return self._visualizer.scatter(self.data[column_1], self.data[column_2],
+                                                {1: column_1, 2: column_2},
+                                                {1: self.get_units(column_1), 2: self.get_units(column_2)},
+                                                axes=axes)
+
+    def downgrade_data_frequency(self, column, freq, from_date=None, to_date=None, func=np.sum, reverse_transform=True):
+        """
+        Downgrade the frequency of a column data by applying a given function
+        :param column: (str) Label of the column
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param func: (func) Function to apply on data
+        :param reverse_transform: (bool) Use reverse transformed data
+        :return: (numpy.ndarray) Data with the new frequency
+        """
+        column_scale = self._get_scale(column)
+        timezone = self.attributes[column_scale]['timezone']
+        data = self.reverse_trans(column) if reverse_transform else self.data[column]
+        return self._inplace(column,
+                             self._preprocessor.downgrade_data_frequency(data, self.data[column_scale], freq,
+                                                                         from_date, to_date, timezone, func),
+                             assign=None)
+
+    def _plot_calculate_data_scale_units(self, column, from_date, to_date, reverse_transform, freq, func):
+        """
+        Return data from a column between given dates and with given frequency
+        :param column: (str) Label of the column
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param reverse_transform: (bool) Use reverse transformed data
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
+        :param func: (func) Function to apply on data
+        :return: (numpy.ndarray, numpy.ndarray, str) Data, scale and units
+        """
+        data, units = (self.reverse_trans(column), self.attributes[column]['units']) if reverse_transform else\
+            (self.data[column], self.get_units(column))
+        scale_column = self._get_scale(column)
+        scale = self.data[scale_column]
+        date_mask = self._preprocessor._date_mask(scale, from_date, to_date, self.attributes[scale_column]['timezone'])
+        scale = np.array(scale)[date_mask]
+        data = data[date_mask]
+
+        if self._compatible_data([column]) and self._no_scale_in_data([column]):
+            if freq:
+                data, scale = self.downgrade_data_frequency(column, freq, from_date, to_date, func, reverse_transform)
+                if freq == 'week':
+                    years = set([s[0] for s in scale])
+                    maxs = [max([s[1] for s in scale if s[0] == y]) + 1 for y in years]
+                    dct = dict(zip(years, maxs))
+                    scale = [i[0] + i[1] / dct[i[0]] for i in scale]
+                scale = np.array(scale)
+            else:
+                scale = self._preprocessor._timestamps_to_dates(scale, tz=self.attributes[scale_column]['timezone'])
+        return data, scale, units
+
+    def plot(self, column, from_date=None, to_date=None, reverse_transform=True, axes=False, freq=None, func=np.sum):
+        """
+        Creates a plot to visualize data of a column in time
+        :param column: (str) Label of the column
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param reverse_transform: (bool) Use reverse transformed data
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
+        :param func: (func) Function to apply on data
+        :return: (pyplot.axes) Axes of the plot
+        """
+        data, scale, units = self._plot_calculate_data_scale_units(column, from_date, to_date,
+                                                                   reverse_transform, freq, func)
+
+        func_str = f'{str(func)[str(func).index('function ') + 9: str(func).index('at 0x') - 1]}'
+        self._visualizer.plot(scale, data,
+                              f'{column} - {func_str}({freq})' if freq else column, units, axes=axes)
+
+    def hist(self, column, bins=10, reverse_transform=True, density=False, axes=False, plot_norm=False):
+        """
+        Creates a histogram-plot to visualize data contribution of a column
+        :param column: (str) Label of the column
+        :param bins: (int) Number of bins to divide contribution
+        :param reverse_transform: (bool) Use reverse transformed data
+        :param density: (bool) If True it creates probability density histogram
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :param plot_norm: (bool) If True and also density is True, it draws a normal distribution with same mean and
+                                 standard deviation as these of the data.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        if self._compatible_data([column]):
+            self._visualizer.hist(self.reverse_trans(column) if reverse_transform else self.data[column], column,
+                                  self.attributes[column]['units'] if reverse_transform else self.get_units(column),
+                                  bins, density, axes, plot_norm=plot_norm)
+
+    def _compatible_data(self, columns):
+        """
+        Check if columns contain a series. If any of them contains a table, it raises an exception
+        :param columns: (list(str)) List of the columns to be checked
+        :return: True if every column are series
+        """
+        for column in columns:
+            if self.data[column].dtype.names:
+                raise TypeError(f"Incompatible data type in column '{column}'")
+        return True
+
+    def _get_scale(self, column):
+        """
+        Return scale column name of a column
+        :param column: (str) Label of the column
+        :return: (str) Label of the scale
+        """
+        scale = self.attributes[column]['scale']
+        if not scale:
+            raise TypeError(f"No scale found. Use attach_scale() function to set a scale for column '{column}'. ")
+        return scale
+
+    def _no_scale_in_data(self, columns):
+        """
+        Check if given columns not contain scales. Otherwise, it raises exception.
+        :param columns: (list(str)) List of the columns to be checked
+        :return: True if every column is not a scale
+        """
+        for column in columns:
+            if self.is_scale(column):
+                raise ValueError(f"Column '{column}' is a scale")
+        return True
+
+    def plot_seasons(self, column, period, from_date=None, to_date=None, reverse_transform=True, axes=None,
+                        freq=None, func=np.sum):
+        """
+        Plot seasonal datas
+        :param column: (str) Label of the column
+        :param period: (str) Period of the plot ('annual', 'weekly', 'daily')
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param reverse_transform: (bool) Use reverse transformed data
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
+        :param func: (func) Function to apply on data
+        :return: (pyplot.axes) Axes of the plot
+        """
+        legend = []
+        valid_types = [('annual', 'hour'), ('annual', 'day'), ('annual', 'week'),
+                       ('weekly', 'hour'), ('weekly', 'day'), ('daily', 'hour')]
+        legend_format = {'annual': '%Y', 'weekly': '%d/%m/%y', 'daily': '%d/%m/%y %Hh'}
+        if (period, freq) not in valid_types:
+            raise TypeError(f'Period/Freq not valid values. Choose one of {valid_types}')
+
+        data, scale, units = self._plot_calculate_data_scale_units(column, from_date, to_date,
+                                                                   reverse_transform, freq, func)
+
+        if period == 'annual':
+            if freq == 'week':
+                years = sorted(set([int(s) for s in scale]))
+                data_splits = [data[scale.astype(np.int16) == year] for year in years]
+                scale_splits = [scale[scale.astype(np.int16) == year] for year in years]
+            else:
+                years = sorted(set([s.year for s in scale]))
+                indx = np.zeros(scale.shape, dtype=np.int64)
+                for i in range(scale.shape[0]):
+                    indx[i] = scale[i].year
+                data_splits = [data[indx == year] for year in years]
+                scale_splits = [scale[indx == year] for year in years]
+        elif period == 'weekly':
+            weeks = sorted(set([s.isocalendar()[:2] for s in scale]))
+            indx = np.zeros(scale.shape, dtype=[('year', np.int16), ('week', np.int16)])
+            for i in range(scale.shape[0]):
+                indx[i] = scale[i].isocalendar()[:2]
+            weeks = np.array(list(weeks), dtype=indx.dtype)
+            data_splits = [data[indx == week] for week in weeks]
+            scale_splits = [scale[indx == week] for week in weeks]
+        else:
+            days = sorted(set([(s.year, s.month, s.day) for s in scale]))
+            indx = np.zeros(scale.shape, dtype=[('year', np.int16), ('month', np.int16), ('day', np.int16)])
+            for i in range(scale.shape[0]):
+                indx[i] = scale[i].day
+            days = np.array(list(days), dtype=indx.dtype)
+            data_splits = [data[indx == day] for day in days]
+            scale_splits = [scale[indx == day] for day in days]
+
+        for sc in scale_splits:
+            if period == 'annual':
+                try:
+                    legend.append(f"{sc[0].strftime(legend_format[period])}")
+                except AttributeError:
+                    legend.append(f"{int(sc[0])}")
+            else:
+                legend.append(f"{sc[0].strftime(legend_format[period])} - {sc[-1].strftime(legend_format[period])}")
+
+        return self._visualizer.plot_seasons(data_splits, f'{column} - ({period}/{freq})' if freq else column,
+                                             units, legend, axes)
+
+    def plot_shapes(self, columns, from_date=None, to_date=None, axes=None, freq=None):
+        """
+        Compares plot-shapes of different columns
+        :param columns: (list(str)) List of the columns to be plotted
+        :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
+        :return: (pyplot.axes) Axes of the plot
+        """
+        datas = []
+        scale = None
+        for column in columns:
+            data, scale_, _ = self._plot_calculate_data_scale_units(column, from_date, to_date,
+                                                                   True, freq, np.mean)
+            datas.append(data)
+            if isinstance(scale, type(None)):
+                scale = scale_
+            else:
+                if not np.array_equal(scale, scale_):
+                    raise ValueError('Scales not matching')
+
+        return self._visualizer.plot_schemas(scale, datas, columns, axes)
+
+    def _get_multi_differenciated_column(self, column, diffs):
+        """
+        Return multi-differenciated data from a column
+        :param column: (str) Label of the column
+        :param diffs: (list(int)) List of integers representing the differenciations to be calculated
+        :return: (numpy.ndarray) multi-differenciated data
+        """
+        data = self.data[column].copy()
+        for dif in diffs:
+            data = self._preprocessor.differenciate(data, dif)
+        return data
+
+    def acf(self, column, nlags=None, qstat=False, alpha=None, missing='none', diffs=()):
+        """
+        Calculates autocorrelation function on multi-differentiate data of given column
+        :param column: (str) Label of the column
+        :param nlags: (int) Number of plotted lags
+        :param qstat: (bool) If True returns the Ljung-Box q statistic for each autocorrelation coefficient
+        :param alpha: (float) For calculation of confident intervals
+        :param missing: (str) Specifying how the nans are treated ('none', 'raise', 'conservative', 'drop')
+        :param diffs: (list(int)) List of integers representing the differenciations to be calculated
+        :return: (list) Results from statsmodels module acf on multi-differentiate data of given column
+        """
+        data = self._get_multi_differenciated_column(column, diffs)
+        return self._stats.acf(data, nlags=nlags, qstat=qstat, alpha=alpha, missing=missing)
+
+    def pacf(self, column, nlags=None, method='yw', alpha=None, diffs=()):
+        """
+        Estimates partial autocorrelation on multi-differentiate data of given column
+        :param column: (str) Label of the column
+        :param nlags: (int) Number of plotted lags
+        :param method: Method for calculations ('yw', 'ywm', 'ols-inefficient', 'ols-adjusted', 'ld', 'ldb', 'burg')
+        :param alpha: (float) For calculation of confident intervals
+        :param diffs: (list(int)) List of integers representing the differenciations to be calculated
+        :return: (list) Results from statsmodels module pacf on multi-differentiate data of given column
+        """
+        data = self._get_multi_differenciated_column(column, diffs)
+        return self._stats.pacf(data, nlags=nlags, method=method, alpha=alpha)
+
+    def plot_acf(self, column, nlags=None, diffs=(), axes=None):
+        """
+        Create a figure with an ACF plot on multi-differentiate data of given column
+        :param column: (str) Label of the column
+        :param nlags: (int) Number of plotted lags
+        :param diffs: (list(int)) List of integers representing the differenciations to be calculated
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        data = self._get_multi_differenciated_column(column, diffs)
+        return self._visualizer.plot_acf(data, name=column, nlags=nlags, axes=axes)
+
+    def plot_pacf(self, column, nlags=None, diffs=(), method='yw', axes=None):
+        """
+        Create a figure with a PACF plot on multi-differentiate data of given column
+        :param column: (str) Label of the column
+        :param nlags: (int) Number of plotted lags
+        :param diffs: (list(int)) List of integers representing the differenciations to be calculated
+        :param method: Specifies which method for the calculations to use
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        data = self._get_multi_differenciated_column(column, diffs)
+        if diffs:
+            while np.isnan(data[0]):
+                data = data[1:]
+        return self._visualizer.plot_pacf(data, name=column, nlags=nlags, method=method, axes=axes)

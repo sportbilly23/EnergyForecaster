@@ -1,8 +1,8 @@
 from DataController import DataController
 from Preprocessor import Preprocessor
 from ProcessController import ProcessController
-from Statistics import Statistics
-from Visualizer import Visualizer
+from Statistics import StatsData, StatsResults
+from Visualizer import VisualizeData, VisualizeResults
 import logging
 
 
@@ -24,8 +24,10 @@ class EnergyForecaster:
         """
         self.preprocessor = Preprocessor(self)
         self.process_controller = ProcessController(self)
-        self.statistics = Statistics(self)
-        self.visualizer = Visualizer(self)
+        self.data_statistics = StatsData(self)
+        self.results_statistics = StatsResults(self)
+        self.data_visualizer = VisualizeData(self)
+        self.results_visualizer = VisualizeData(self)
         self.data_controller = DataController(self, folderpath)
 
 
@@ -33,14 +35,81 @@ if __name__ == '__main__':
     import time
     ef = EnergyForecaster('e:/test')
     # print(time.time())
-    # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
-    ef.data_controller.get_dataset('weather')
-    # print(ef.data_controller.current_datasets.keys())
-    # ef.data_controller.current_datasets['consumption']['ES_load_actual_entsoe_transparency'][5] = 47368
-    # ef.data_controller.set_dataset('consumption', 'consumption2')
-    # print(ef.data_controller.dataset_is_changed('consumption'))
-    # try:
-    #     ef.data_controller.close_dataset('consumption')
-    # except KeyError as e:
-    #     print(e)
+    # ef.data_contrller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
+    # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', h5_name='sb', skip=2)
+    # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\consumption.csv', h5_name='sb2')
+    ef.data_controller.get_dataset('sb2')
+    # ef.data_controller.get_dataset('weather')
+    ef.data_controller.get_dataset('sb')
+    sb = ef.data_controller.datasets['sb']
+    sb2 = ef.data_controller.datasets['sb2']
+    # sb.to_timestamp('time', '%Y-%m-%d %H:%M:%S', assign='inplace', tzone='utc')
+    # sb.minmax(column='temperature', assign='inplace')
+    # sb.set_units('temperature', 'oC')
+    # sb.weekday(column='time', assign='add')
+    # ef.data_controller.update_dataset('sb')
+
+    # sb.to_timestamp('time', '%Y-%m-%d %H:%M:%S', tzone='utc', assign='inplace')
+    # sb.weekday('time', 'one-hot', assign='add')
+    # sb.attach_scale('temperature', 'time')
+    # sb.attach_scale('precipitation', 'time')
+    # sb.attach_scale('irradiance_surface', 'time')
+    # sb.attach_scale('snow_mass', 'time')
+    # sb.attach_scale('irradiance_toa', 'time')
+    # sb.attach_scale('cloud_cover', 'time')
+    # sb.attach_scale('air_density', 'time')
+    # sb.attach_scale('snowfall', 'time')
+
+    # sb.minmax('temperature', assign='inplace')
+    # sb.minmax('precipitation', assign='inplace')
+    # sb.minmax('irradiance_surface', assign='inplace')
+    # sb.minmax('snow_mass', assign='inplace')
+    # sb.minmax('irradiance_toa', assign='inplace')
+    # sb.minmax('cloud_cover', assign='inplace')
+    # sb.minmax('air_density', assign='inplace')
+    # sb.minmax('snowfall', assign='inplace')
+    # sb2.to_timestamp('cet_cest_timestamp', '%Y-%m-%dT%H:%M:%S%z', tzone='Europe/Madrid', assign='inplace')
+    # sb2.make_scale('cet_cest_timestamp')
+    # sb2.attach_scale('ES_load_actual_entsoe_transparency', 'cet_cest_timestamp')
+    # sb2.make_target('ES_load_actual_entsoe_transparency')
+    # ef.data_controller.update_dataset('sb2')
+    # ef.data_controller.update_dataset('sb')
+
+    # t = sb.downgrade_data_frequency('temperature', 'week')
+    # sb.plot('temperature')
+    # sb.plot('temperature', freq='day')
+    # sb.plot('temperature', freq='week')
+    # import numpy as np
+    # sb.plot('temperature', freq='month', func=np.mean, from_date=(2000, 1, 1), to_date=(2000, 12, 31))
+    # sb.plot_seasons('temperature', 'weekly', from_date=(2000, 1, 3), to_date=(2000, 1, 30), func=np.mean, freq='hour')
+    # sb.plot_schemas(['precipitation', 'snowfall', 'air_density', 'temperature'], from_date=(2000, 1, 1), to_date=(2000, 12, 31), freq='week')
+    # sb.hist('temperature', plot_norm=True, density=True)
+    # sb.detach_scale('precipitation')
+    # sb.attributes['precipitation']
+    # ef.data_controller.close_dataset('sb')
+    # sb.plot_acf('temperature', diffs=(24, 1, 1), nlags=25)
+    # sb.plot_pacf('temperature', diffs=(24, 1, 1), nlags=25)
+    # sb.lagged_series('weekday', name='weekday', lags=(0, 2, 3, 4, 5, 6, 7), assign='inplace')
+    # sb.lagged_series('temperature', 'temp', lags=(1, 2), assign='add')
+    # ef.process_controller.set_process('sb', lags=3, black_lags=2, target_length=24)
+    ef.process_controller.get_process('sb')
+    # ef.process_controller.insert_data('sb', ['temperature', 'cloud_cover',
+    #                                          'irradiance_surface', 'precipitation'], no_lags=False)
+    # ef.process_controller.insert_data('sb', ['time_204588272', 'time_588562846', 'time_728017024', 'time_675637917'])
+
+    # ef.process_controller.insert_data('sb2', ['ES_load_actual_entsoe_transparency'])
+    # ef.process_controller.update_process()
+    # from statsmodels.tsa.statespace.sarimax import SARIMAX
+    # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
+    #                                         endog=ef.process_controller.process.get_target(), order=(1, 1, 1)),
+    #                                 'arima_111', 'statsmodels')
+    # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
+    #                                         endog=ef.process_controller.process.get_target(), order=(0, 0, 0)),
+    #                                 'arima_000', 'statsmodels')
+    # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
+    #                                         endog=ef.process_controller.process.get_target(), order=(3, 1, 0)),
+    #                                 'arima_310', 'statsmodels')
+    # ef.process_controller.update_process()
+    # ef.process_controller.fit_models()
     print(time.time())
+
