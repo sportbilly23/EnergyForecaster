@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import utils
 
 
 class Visualizer:
@@ -9,6 +10,19 @@ class Visualizer:
     def __init__(self, ef):
         self._EF = ef
         self.datasets = None
+
+    def _limit_xticks(self, data, axes, number_of_ticks=20, rotation=30, period=1, grid=False, text=True):
+        plt.sca(axes)
+        ln = len(data)
+        tick_window = period
+        count = 1
+        while ln / tick_window > number_of_ticks:
+            count += 1
+            tick_window = period * count
+        plt.xticks(range(0, ln - tick_window // 2, tick_window),
+                   [data[i * count] for i in range(round(ln / tick_window))] if text else\
+                   [i * count for i in range(round(ln / tick_window))], rotation=rotation)
+        plt.grid(grid)
 
     def _get_next_figure_name(self, pattern):
         """
@@ -78,57 +92,6 @@ class Visualizer:
         axes.set_ylabel('partial correlation')
         return axes
 
-
-class VisualizeData(Visualizer):
-    """
-    Visualizations for data
-    """
-    COMPARE_PERIODS_GRAPH_TYPE = {0: 'Annual/Mean(Day)', 1: 'Annual/Mean(Week)', 2: 'Annual/Mean(Month)',
-                                  3: 'Weekly/Mean(Day)', 4: 'Weekly/Mean(Hour)', 5: 'Daily/Mean(Hour)'}
-
-    def scatter(self, data_1, data_2, names=('data_1', 'data_2'), units=('units', 'units'),
-                marker='o', markersize=2, axes=None):
-        """
-        Creates scatter-plot to visualize correlation between variables
-        :param data_1: (numpy.ndarray) Data of the first variable (x-axes)
-        :param data_2: (numpy.ndarray) Data of the second variable (y-axes)
-        :param names: (tuple(str)) Names of the variables
-        :param units: (tuples(str)) Units of the variables
-        :param marker: (str) Marker of the plot
-        :param markersize: (int) Size of the marker
-        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
-        :return: (pyplot.axes) Axes of the plot
-        """
-        plt.interactive(True)
-        if not axes:
-            figure = plt.figure(self._get_next_figure_name('Scatter Plot'))
-            axes = figure.subplots()
-        axes.plot(data_1, data_2, linewidth=0.0, marker=marker, markersize=markersize)
-        axes.set_title(f'{names[0]} vs {names[1]}')
-        axes.set_xlabel(units[0])
-        axes.set_ylabel(units[1])
-        return axes
-
-    def plot(self, scale, data, name='data', units='units', axes=None):
-        """
-        Creates a plot to visualize variable into time
-        :param scale: (numpy.ndarray) Scale data of the variable to plot
-        :param data: (numpy.ndarray) Data of the variable to plot
-        :param name: (str) Names of the variable
-        :param units: (str) Units of the variable
-        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
-        :return: (pyplot.axes) Axes of the plot
-        """
-        plt.interactive(True)
-        if not axes:
-            figure = plt.figure(self._get_next_figure_name('Plot'))
-            axes = figure.subplots()
-        axes.plot(scale, data)
-        axes.set_title(f'{name}')
-        axes.set_xlabel('time')
-        axes.set_ylabel(units)
-        return axes
-
     def hist(self, data, name='data', units='units', bins=10, density=False, axes=None, plot_norm=False):
         """
         Creates a histogram-plot to visualize data contribution of a column
@@ -160,6 +123,71 @@ class VisualizeData(Visualizer):
 
         return axes
 
+    def plot(self, scale, data, name='data', units='units', axes=None):
+        """
+        Creates a plot to visualize variable into time
+        :param scale: (numpy.ndarray) Scale data of the variable to plot
+        :param data: (numpy.ndarray) Data of the variable to plot
+        :param name: (str) Names of the variable
+        :param units: (str) Units of the variable
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Plot'))
+            axes = figure.subplots()
+        axes.plot(scale, data)
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+        return axes
+
+    def plot_residuals(self, scale, resids, name='residuals', units='units', axes=None):
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Residuals'))
+            axes = figure.subplots()
+        self._limit_xticks(scale, axes, number_of_ticks=20, rotation=0, text=True, grid=True)
+        axes.bar(scale, resids, width=.2)
+
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+
+        return axes
+
+
+class VisualizeData(Visualizer):
+    """
+    Visualizations for data
+    """
+    COMPARE_PERIODS_GRAPH_TYPE = {0: 'Annual/Mean(Day)', 1: 'Annual/Mean(Week)', 2: 'Annual/Mean(Month)',
+                                  3: 'Weekly/Mean(Day)', 4: 'Weekly/Mean(Hour)', 5: 'Daily/Mean(Hour)'}
+
+    def scatter(self, data_1, data_2, names=('data_1', 'data_2'), units=('units', 'units'),
+                marker='o', markersize=2, axes=None):
+        """
+        Creates scatter-plot to visualize correlation between variables
+        :param data_1: (numpy.ndarray) Data of the first variable (x-axes)
+        :param data_2: (numpy.ndarray) Data of the second variable (y-axes)
+        :param names: (tuple(str)) Names of the variables
+        :param units: (tuples(str)) Units of the variables
+        :param marker: (str) Marker of the plot
+        :param markersize: (int) Size of the marker
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Scatter Plot'))
+            axes = figure.subplots()
+        axes.plot(data_1, data_2, linewidth=0.0, marker=marker, markersize=markersize)
+        axes.set_title(f'{names[0]} vs {names[1]}')
+        axes.set_xlabel(units[0])
+        axes.set_ylabel(units[1])
+        return axes
+
     def plot_shapes(self, scale, datas, names, axes=None):
         """
         Compares plot-shapes of different variables
@@ -178,7 +206,7 @@ class VisualizeData(Visualizer):
 
         axes.legend(labels=legend)
 
-    def plot_seasons(self, datas, name, units, legend_lines, axes=None):
+    def plot_seasons(self, datas, legend_lines, name='data', units='units', axes=None):
         """
         Plot seasonal datas
         :param datas: (list(numpy.ndarray)) List of seasonal divided datas
@@ -196,29 +224,154 @@ class VisualizeData(Visualizer):
 
         return axes
 
-    # def _plot_calculate_data_scale_units(self, column, from_date, to_date, reverse_transform, freq, func):
-    #     data, units = (self.reverse_trans(column), self.attributes[column]['units']) if reverse_transform else\
-    #         (self.data[column], self.get_units(column))
-    #     scale_column = self._get_scale(column)
-    #     scale = self.data[scale_column]
-    #     date_mask = self._preprocessor._date_mask(scale, from_date, to_date, self.attributes[scale_column]['timezone'])
-    #     scale = np.array(scale)[date_mask]
-    #     data = data[date_mask]
-    #
-    #     if self._compatible_data([column]) and self._no_scale_in_data([column]):
-    #         if freq:
-    #             data, scale = self.downgrade_data_frequency(column, freq, from_date, to_date, func, reverse_transform)
-    #             if freq == 'week':
-    #                 years = set([s[0] for s in scale])
-    #                 maxs = [max([s[1] for s in scale if s[0] == y]) + 1 for y in years]
-    #                 dct = dict(zip(years, maxs))
-    #                 scale = [i[0] + i[1] / dct[i[0]] for i in scale]
-    #             scale = np.array(scale)
-    #         else:
-    #             scale = self._preprocessor._timestamps_to_dates(scale, tz=self.attributes[scale_column]['timezone'])
-    #     return data, scale, units
+    def _moving_averages(self, data, period, centering=True):
+        ln = len(data)
+        new_data = np.array([np.mean(data[i:period + i]) for i in range(ln - period + 1)])
+        if centering and period % 2 == 0:
+            new_data = self._moving_averages(new_data, 2, False)
+        return new_data
+
+    def _moving_average_data_offset(self, length, period):
+        offset = period // 2
+        return lambda x: x[offset: length - offset]
+
+    def _get_trend_rest_data(self, data, period, trend_sign):
+        trend = self._moving_averages(data, period)
+        ln = len(data)
+        if trend_sign == 'div':
+            return trend, self._moving_average_data_offset(ln, period)(data) / trend
+        elif trend_sign == 'sub':
+            return trend, self._moving_average_data_offset(ln, period)(data) - trend
+
+    def _get_seasonality(self, detrend_data, period):
+        ln = len(detrend_data)
+        seasonal_means = np.nanmean(np.pad(detrend_data, (0, int(np.ceil(ln / period) * period - ln)),
+                                           constant_values=np.nan).reshape(-1, period), axis=0)
+        return np.tile(seasonal_means, (int(np.ceil(ln / period)),))[:ln]
+
+    def _calibrate_seasonality(self, data, period, trend_sign):
+        if trend_sign == 'div':
+            return data / np.sum(data) * period
+        elif trend_sign == 'sub':
+            return data - np.sum(data) / len(data)
+
+    def _plot_moving_averages(self, data, name, period, units='units', axes=None):
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
+            axes = figure.subplots()
+        self._limit_xticks(data, axes, period=period, grid=True)
+        axes.plot(data)
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+        # tick_window = period
+        # count = 1
+        # while ln / tick_window > 20:
+        #     count += 1
+        #     tick_window = period * count
+        # plt.xticks(range(0, ln - tick_window // 2, tick_window),
+        #            [i * count for i in range(round(ln / tick_window))], rotation=30)
+        # plt.grid(True)
+
+    def plot_moving_averages(self, data, name, period, units='units', axes=None):
+        data_ = self._moving_averages(data, period)
+        return self._plot_moving_averages(data_, name, period, units=units, axes=axes)
+
+    def plot_seasonality(self, data, name, period, trend_sign='div', number_of_periods=1, units='units', axes=None):
+        _, rest_data = self._get_trend_rest_data(data, period, trend_sign=trend_sign)
+        seasons = self._calibrate_seasonality(self._get_seasonality(rest_data, period), period, trend_sign)
+        if number_of_periods:
+            seasons = seasons[:number_of_periods * period]
+
+        return self._plot_seasonality(seasons, name, period, units=units, axes=axes)
+
+    def _plot_seasonality(self, data, name, period, units='units', axes=None):
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
+            axes = figure.subplots()
+        self._limit_xticks(data, axes, period=period, grid=True)
+        axes.plot(data)
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+
+        # tick_window = period
+        # count = 1
+        # ln = len(data)
+        # while ln / tick_window > 20:
+        #     count += 1
+        #     tick_window = period * count
+        # plt.xticks(range(0, ln - tick_window // 2, tick_window),
+        #            [i * count for i in range(round(ln / tick_window))], rotation=30)
+        # plt.grid(True)
+
+        return axes
+
+        res = sr / seasons
+        # Γράφημα υπολειμμάτων
+        ax_res.bar(range(len(ma)), res - 1, bottom=1)
+
+    def _get_trend_seasonality_residuals(self, data, period, trend_sign, seasonal_sign):
+        trend, rest_data = self._get_trend_rest_data(data, period, trend_sign)
+        seasons = self._calibrate_seasonality(self._get_seasonality(rest_data, period), period, trend_sign)
+        if seasonal_sign == 'sub':
+            resids = rest_data - seasons
+        elif seasonal_sign == 'div':
+            resids = rest_data / seasons
+        return trend, seasons, resids
+
+    def plot_classical_decomposition(self, data, scale, timezone, name, period, number_of_periods=None, units='units',
+                                     trend_sign='div', seasonal_sign='div'):
+        trend, season, resids = self._get_trend_seasonality_residuals(data, period, trend_sign=trend_sign,
+                                                                      seasonal_sign=seasonal_sign)
+        plt.interactive(True)
+        figure = plt.figure(self._get_next_figure_name('Classical decomposition'))
+        axes = figure.subplots(4, 1)
+
+        slice = lambda x: x[:period * number_of_periods] if number_of_periods else x
+
+        data_ = slice(data)
+        scale_ = slice(utils.timestamp_to_date_str(scale, timezone))
+
+        self._limit_xticks(scale_, axes[0], number_of_ticks=10, rotation=5, text=True, grid=True)
+        self.plot(scale_, data_, '', units, axes=axes[0])
+        plt.suptitle(f'{name} - data / trend / seasonality / residuals - period {period}')
+
+        scale__ = slice(utils.timestamp_to_date_str(self._moving_average_data_offset(len(scale), period)(scale),
+                                                    timezone))
+        trend_ = slice(trend)
+        season_ = slice(season)
+        resids_ = slice(resids)
+
+        self._limit_xticks(scale__, axes[1], number_of_ticks=10, rotation=5, text=True, grid=True)
+        self.plot(scale__, trend_, '', units, axes=axes[1])
+
+        self._limit_xticks(scale__, axes[2], number_of_ticks=10, rotation=5, text=True, grid=True)
+        self.plot(scale__, season_, '', units, axes=axes[2])
+
+        self.plot_residuals(scale__, resids_ / data_, '', units, axes=axes[3])
+        self._limit_xticks(scale__, axes[3], number_of_ticks=10, rotation=5, text=True, grid=True)
 
 
 class VisualizeResults(Visualizer):
 
-    pass
+    def plot_forecast(self, scale, actual, forecast, intervals=[], name='forecasts', units='units', axes=None):
+        intervals = [*zip(*intervals)]
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Forecast plot'))
+            axes = figure.subplots()
+        axes.plot(scale, actual)
+        axes.plot(scale, forecast)
+        if intervals:
+            axes.fill_between(scale, intervals[0], intervals[1], color='orange', alpha=.2)
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+        plt.xticks(scale if len(scale) <= 20 else scale[np.round(np.linspace(0, len(scale) - 1, 20),
+                                                                 0).astype(np.int64).tolist()], rotation=30)
+
+        return axes
+

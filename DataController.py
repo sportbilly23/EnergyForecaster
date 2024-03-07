@@ -503,6 +503,13 @@ class DataController:
         return np.dtypes.ObjectDType
 
     def _set_model(self, name, model, interface):
+        """
+        Creates a new file to store details of a model
+        :param name: (str) The name of the model
+        :param model: A well defined model
+        :param interface: (str) A string to define the interface to use for the manipulation of the model
+        :return: (None)
+        """
         if name not in self.get_model_names():
             with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
                 dill.dump({'name': name, 'model': model, 'interface': interface}, f)
@@ -510,6 +517,11 @@ class DataController:
             raise FileExistsError('Model name already exists')
 
     def _update_model(self, model):
+        """
+        Updates a model's file
+        :param model: (dict) A dictionary with model's details
+        :return: (None)
+        """
         name = model['name']
         if name in self.get_model_names():
             with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
@@ -518,6 +530,11 @@ class DataController:
             raise FileExistsError('Model name already exists')
 
     def _get_model(self, name):
+        """
+        Get a model from the file
+        :param name: (str) Name of the process to get
+        :return: (dict) Dictionary with model's details
+        """
         with open(os.path.join(self.path, 'models', name + '.pkl'), 'rb') as f:
             content = dill.load(f)
         return content
@@ -548,10 +565,10 @@ class DataController:
 
     def set_process(self, process, update_file=False):
         """
-
-        :param process:
-        :param update_file:
-        :return:
+        Store process to memory
+        :param process: (Process) The process instance
+        :param update_file: (bool) True to update the main file with the new process
+        :return: (None)
         """
         self.processes.update({process.name: process})
         if update_file:
@@ -560,8 +577,8 @@ class DataController:
     def update_process(self, process):
         """
         Stores an updated process to the file
-        :param process:
-        :return:
+        :param process: (Process) The process instance
+        :return: (None)
         """
         name = process.name
         with h5py.File(os.path.join(self.path, self.name + '.h5'), 'a') as f:
@@ -589,6 +606,8 @@ class DataController:
                 f[name].create_dataset('scale', data=process.scale, dtype=process.scale.dtype)
             except ValueError:
                 f[name]['scale'][:] = process.scale
+            except AttributeError:
+                pass
 
             self._set_attribute_object(process.target_length, 'target-length', f, name)
             self._set_attribute_object(process.train, 'train', f, name)
@@ -612,6 +631,11 @@ class DataController:
         return proc != process
 
     def remove_process(self, name):
+        """
+        Removes a process from the file
+        :param name: (str) The name of the process
+        :return: (None)
+        """
         with h5py.File(os.path.join(self.path, self.name + '.h5'), 'r+') as f:
             del f[name]
         self.processes.pop(name)
@@ -665,12 +689,12 @@ class DataController:
                         for name in names:
                             column = f'{col}_lag-{lag}::{name}'
                             process.data.update({column: lag_cols[lag_data]})  # dataset[col][name][cut - lag: -lag]})
-                            process.attributes.update({column: dataset.attributes[col].copy()})
-                            process.attributes[column]['lag'] = lag
+                            # process.attributes.update({column: dataset.attributes[col].copy()})
+                            # process.attributes[column]['lag'] = lag
 
                     else:
                         column = f'{col}_lag-{lag}'
                         process.data.update({column: lag_cols[lag_data]})  # dataset[col][cut - lag: -lag]})
-                        process.attributes.update({column: dataset.attributes[col].copy()})
-                        process.attributes[column]['lag'] = lag
+                        # process.attributes.update({column: dataset.attributes[col].copy()})
+                        # process.attributes[column]['lag'] = lag
 

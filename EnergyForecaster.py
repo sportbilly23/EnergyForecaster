@@ -27,7 +27,7 @@ class EnergyForecaster:
         self.data_statistics = StatsData(self)
         self.results_statistics = StatsResults(self)
         self.data_visualizer = VisualizeData(self)
-        self.results_visualizer = VisualizeData(self)
+        self.results_visualizer = VisualizeResults(self)
         self.data_controller = DataController(self, folderpath)
 
 
@@ -111,5 +111,19 @@ if __name__ == '__main__':
     #                                 'arima_310', 'statsmodels')
     # ef.process_controller.update_process()
     # ef.process_controller.fit_models()
+    # aic = ef.process_controller.process.aic()
+
+    # ef.process_controller.insert_data('sb', ['temperature', 'cloud_cover',
+    #                                          'irradiance_surface', 'precipitation'], no_lags=False)
+    # ef.process_controller.insert_data('sb', ['time_204588272', 'time_588562846', 'time_728017024', 'time_675637917'])
+    #
+    # ef.process_controller.insert_data('sb2', ['ES_load_actual_entsoe_transparency'])
+    # ef.process_controller.update_process()
+    # ef.process_controller.remove_process('sb2')
+    # ef.process_controller.process.plot_forecast('arima_000', 'validation', steps=200, start=200,
+    #                                             intervals_from_residuals=True, alpha=0.55)
+    # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7*24, number_of_periods=3, trend_sign='div')
+    # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7 * 24, number_of_periods=3, trend_sign='sub')
+    sb2.plot_classical_decomposition('ES_load_actual_entsoe_transparency', 168, number_of_periods=3, trend_sign='sub', seasonal_sign='sub')
     print(time.time())
 

@@ -1,12 +1,13 @@
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+import utils
 from DictNoDupl import DictNoDupl
 import numpy as np
 import pytz
+import datetime
 
 
 class Process:
     def __init__(self, name, target=DictNoDupl(), data=DictNoDupl(), scale=None, timezone=pytz.utc,
-                 lags=1, black_lags=0, target_length=1, train=.6, validation=.2, test=.2, models=[]):
+                 lags=1, black_lags=0, target_length=1, train=.6, validation=.2, test=.2, models=[], EF=None):
         self.name = name
         self.data = data
         self.target = target
@@ -20,26 +21,216 @@ class Process:
         self.timezone = timezone
         self.lags = (black_lags * target_length,) + tuple((np.arange(1, lags) + black_lags) * target_length)
         self.black_lags = tuple(np.arange(black_lags) * target_length)
+        self._EF = EF
 
-    def get_data(self, mode='train'):
+    def get_model(self, name):
+        """
+        Get model from file by name
+        :param name: (str) Name of the model
+        :return: (dict) Dictionary with all model's details
+        """
+        return self._EF.data_controller._get_model(name)
+
+    def _get_evaluation(self, name, func, data_part):
+        """
+        Creates evaluation statistics for all models
+        :param name: (str) The name of the model
+        :param func: (func) Function from Statistics.py to use evaluation (MAPE, MAE, RMSE, MSE, R-squared)
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) Evaluations for the models
+        """
+        data = self.get_data(data_part)
+        actual = self.get_target(data_part).flatten()
+        model = self.get_model(name)
+        forecast = model['results'].forecast(exog=data, steps=len(data))
+
+        return func(actual, forecast)
+
+    def _get_model_evaluation(self, name, func):
+        """
+        Creates model evaluation statistics for all models
+        :param func: (func) Function from Statistics.py to use evaluation (AIC, AICc, BIC)
+        :return: (dict) Evaluations for the models
+        """
+        res = self.get_residuals(name)
+        model = self.get_model(name)
+        if model['interface'] == 'statsmodels':
+            k_params = model['model'].k_params
+
+        return func(res, k_params)
+
+    def mape(self, name, data_part='train'):
+        """
+        Returns Mean Absolute Percentage Error evaluation for all models
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) MAPE evaluation for all models
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.mape, data_part)
+
+    def mae(self, name, data_part='train'):
+        """
+        Returns Mean Absolute Error evaluation for all models
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) MAE evaluation for all models
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.mae, data_part)
+
+    def rmse(self, name, data_part='train'):
+        """
+        Returns Root Mean Square Error evaluation for all models
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) RMSE evaluation for all models
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.rmse, data_part)
+
+    def mse(self, name, data_part='train'):
+        """
+        Returns Mean Square Error evaluation for all models
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) MSE evaluation for all models
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.mse, data_part)
+
+    def r2(self, name, data_part='train'):
+        """
+        Returns R-Squared evaluation for all models
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) R-squared evaluation for all models
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.r2, data_part)
+
+    def aic(self, name):
+        """
+        Returns Akaike's Information Criterion for all models
+        :param name: (str) The name of the model
+        :return: (dict) AIC evaluation for all models
+        """
+        return self._get_model_evaluation(name, self._EF.results_statistics.aic)
+
+    def aicc(self, name):
+        """
+        Returns Akaike's Information Criterion corrected for all models
+        :param name: (str) The name of the model
+        :return: (dict) AICc evaluation for all models
+        """
+        return self._get_model_evaluation(name, self._EF.results_statistics.aicc)
+
+    def bic(self, name):
+        """
+        Returns Bayesian Information Criterion
+        :param name: (str) The name of the model
+        :return: (dict) BIC evaluation for all models
+        """
+        return self._get_model_evaluation(name, self._EF.results_statistics.bic)
+
+    def box_pierce(self, name, lags=[10]):
+        """
+        Box-Pierce portmanteau test
+        :param name: (str) The name of the model
+        :param lags: (int or list(int)) Lags to return test values
+        :return: (tuple(float)) Box-Pierce q-value and p-value
+        """
+        return self._EF.results_statistics.box_pierce(self.get_residuals(name), lags)
+
+    def ljung_box(self, name, lags=[10]):
+        """
+        Ljung-Box portmanteau test
+        :param name: (str) The name of the model
+        :param lags: (int or list(int)) Lags to return test values
+        :return: (tuple(float)) Ljung-Box q-value and p-value
+        """
+        return self._EF.results_statistics.ljung_box(self.get_residuals(name), lags)
+
+    def get_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None):
+        """
+        Returns forecasts for a model
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the forecasts ('train', 'validation', 'test')
+        :param start: (int) Starting point at data
+        :param steps: (int) Number of steps to forecast
+        :return: (numpy.ndarray) Forecasts of the model
+        """
+        model = self.get_model(name)
+        data = self.get_data(data_part)
+        if not steps:
+            steps = len(data)
+        if model['interface'] == 'statsmodels' and 'results' in model:
+            forecast_results = model['results'].get_forecast(exog=data, steps=len(data))
+            forecast = forecast_results.predicted_mean[start: start + steps]
+            if alpha:
+                return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
+            return forecast
+
+    def get_residuals(self, name):
+        data = self.get_data()
+        target = self.get_target().flatten()
+        model = self._EF.data_controller._get_model(name)
+        if model['interface'] == 'statsmodels' and 'results' in model:
+            return target - model['results'].forecast(exog=data, steps=len(data))
+
+    def get_all_residuals(self):
+        """
+        Returns residuals of all models
+        :return: (dict) The residuals of all the models
+        """
+        resids = {}
+        data = self.get_data()
+        target = self.get_target().flatten()
+        for name in self.models:
+            model = self._EF.data_controller._get_model(name)
+            if model['interface'] == 'statsmodels' and 'results' in model:
+                resids.update({name: target - model['results'].forecast(exog=data, steps=len(data))})
+
+        return resids
+
+    def get_data(self, data_part='train'):
+        """
+        Returns the defined part of the dataset
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (numpy.ndarray) The defined part of the dataset
+        """
         data = self._prepare_data(self.data)
-        from_ = 0 if mode == 'train' \
-            else data.shape[0] * self.train if mode == 'validation' \
+        from_ = 0 if data_part == 'train' \
+            else data.shape[0] * self.train if data_part == 'validation' \
             else data.shape[0] * (self.train + self.validation)
-        to_ = data.shape[0] * self.train if mode == 'train' \
-            else data.shape[0] * (self.train + self.validation) if mode == 'validation' \
+        to_ = data.shape[0] * self.train if data_part == 'train' \
+            else data.shape[0] * (self.train + self.validation) if data_part == 'validation' \
             else data.shape[0]
         return data[int(from_):int(to_)]
 
-    def get_target(self, mode='train'):
+    def get_target(self, data_part='train'):
+        """
+        Returns the defined part of the target dataset
+        :param data_part: (str) The part of target data to get('train', 'validation', 'test')
+        :return: (numpy.ndarray) The defined part of the target dataset
+        """
         data = self._prepare_data(self.target)
-        from_ = 0 if mode == 'train' \
-            else data.shape[0] * self.train if mode == 'validation' \
+        from_ = 0 if data_part == 'train' \
+            else data.shape[0] * self.train if data_part == 'validation' \
             else data.shape[0] * (self.train + self.validation)
-        to_ = data.shape[0] * self.train if mode == 'train' \
-            else data.shape[0] * (self.train + self.validation) if mode == 'validation' \
+        to_ = data.shape[0] * self.train if data_part == 'train' \
+            else data.shape[0] * (self.train + self.validation) if data_part == 'validation' \
             else data.shape[0]
         return data[int(from_):int(to_)]
+
+    def get_scale(self, data_part='train'):
+        """
+        Returns the defined part of the scale
+        :param data_part: (str) The part of target data to get('train', 'validation', 'test')
+        :return: (numpy.ndarray) The defined part of the scale
+        """
+        from_ = 0 if data_part == 'train' \
+            else self.scale.shape[0] * self.train if data_part == 'validation' \
+            else self.scale.shape[0] * (self.train + self.validation)
+        to_ = self.scale.shape[0] * self.train if data_part == 'train' \
+            else self.scale.shape[0] * (self.train + self.validation) if data_part == 'validation' \
+            else self.scale.shape[0]
+        return self.scale[int(from_):int(to_)]
 
     def _prepare_data(self, data_dict):
         """
@@ -56,6 +247,42 @@ class Process:
             else:
                 final_data.append(data_dict[i])
         return np.vstack(final_data).T
+
+    def plot_residuals(self, name, start=0, steps=None, axes=None):
+        resids = self.get_residuals(name)
+        ln = len(resids)
+        scale = self.get_scale()[start: start + steps if steps else ln - start]
+        scale_str = utils.timestamp_to_date_str(scale)
+        self._EF.results_visualizer.plot_residuals(scale_str,
+                                                   resids[start: start + steps if steps else ln - start],
+                                                   f'{name} residuals', axes=axes)
+
+    def hist_residuals(self, name, bins=10, density=False, plot_norm=False, axes=None):
+        resids = self.get_residuals(name)
+        self._EF.results_visualizer.hist(resids, f'{name} residuals', bins=bins, density=density,
+                                         plot_norm=plot_norm, axes=axes)
+
+    def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
+                      intervals_from_residuals=True):
+        alpha = min(alpha, 1 - alpha)
+        forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
+                                      alpha=None if intervals_from_residuals else alpha)
+        conf_int = []
+        if alpha:
+            if intervals_from_residuals:
+                from scipy.stats import norm
+                resids = self.get_residuals(name)
+                mn = np.mean(resids)
+                std = np.std(resids)
+                conf_int = [(i + norm.ppf(alpha, mn, std), i + norm.ppf(1 - alpha, mn, std)) for i in forecast]
+            else:
+                forecast, conf_int = forecast
+
+        actual = self.get_target(data_part)[start: start + len(forecast)]
+        scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
+        self._EF.results_visualizer.plot_forecast(scale, actual, forecast, conf_int,
+                                                  name=f'{name}' + ('' if isinstance(alpha, type(None)) else
+                                                  f' - confidence {1 - alpha:1.0%}'), axes=axes)
 
 
 class ProcessController:
@@ -97,12 +324,12 @@ class ProcessController:
         :return: (Process) The saved process
         """
         return Process(name, target, data, scale, timezone, len(lags), len(black_lags),
-                       target_length, train, validation, test, models)
+                       target_length, train, validation, test, models, self._EF)
 
     def fit_models(self):
         """
         Training all models
-        :return:
+        :return: (None)
         """
         for name in self.process.models:
             model = self._EF.data_controller._get_model(name)
@@ -127,8 +354,8 @@ class ProcessController:
         amount = train + validation + test
         self._EF.data_controller.set_process(Process(name, lags=lags, black_lags=black_lags,
                                                      target_length=target_length, train=train / amount,
-                                                     validation=validation / amount, test=test / amount),
-                                             update_file=update_file)
+                                                     validation=validation / amount, test=test / amount,
+                                                     EF=self._EF), update_file=update_file)
 
     def get_process_names(self):
         """
@@ -158,7 +385,7 @@ class ProcessController:
     def update_process(self):
         """
         Stores the updated current process to the file
-        :return:
+        :return: (None)
         """
         if self.process:
             self._EF.data_controller.update_process(self.process)
@@ -171,9 +398,9 @@ class ProcessController:
         :param name: (str) Name of the process
         :return: (None)
         """
-        yn = input("Process will de deleted permanently. Are you sure you want to delete it? (Type 'yes' to close): ")
+        yn = input("Process will de deleted permanently. Are you sure you want to delete it? (Type 'yes' to delete): ")
         if yn.upper() == 'YES':
-            if name == self.process['name']:
+            if self.process and name == self.process.name:
                 self.process = None
             self._EF.data_controller.remove_process(name)
 
@@ -195,4 +422,5 @@ class ProcessController:
         if self.process:
             self._EF.data_controller._import_data_to_process(dataset, columns, self.process,
                                                              change_to_new_tzone=change_to_new_tzone, no_lags=no_lags)
+
 

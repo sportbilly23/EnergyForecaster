@@ -1,5 +1,6 @@
 import numpy as np
 from statsmodels.tsa.stattools import kpss, adfuller, acf, pacf
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import pearsonr, spearmanr
 
 
@@ -141,4 +142,107 @@ class StatsData(Statistics):
 
 
 class StatsResults(Statistics):
-    pass
+    def mape(self, actual, forecast):
+        """
+        Calculates Mean Absolute Percentage Error given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) MAPE score
+        """
+        return np.mean(np.abs(actual - forecast) / actual)
+
+    def mae(self, actual, forecast):
+        """
+        Calculates Mean Absolute Error given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) MAE score
+        """
+        return np.mean(np.abs(actual - forecast))
+
+    def rmse(self, actual, forecast):
+        """
+        Calculates Root Mean Square Error given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) RMSE score
+        """
+        return np.mean(np.square(actual - forecast)) ** 0.5
+
+    def mse(self, actual, forecast):
+        """
+        Calculates Mean Square Error given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) MSE score
+        """
+        return np.mean(np.square(actual - forecast))
+
+    def r2(self, actual, forecast):
+        """
+        Calculates R-Squared given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) R-Squared score
+        """
+        ln = len(actual)
+        return (((ln * np.sum(np.multiply(actual, forecast)) - np.sum(actual) * np.sum(forecast)) /
+                (((ln * np.sum(np.square(actual)) - np.sum(actual) ** 2) ** 0.5) * ((ln * np.sum(np.square(forecast)) -
+                                                                                     np.sum(forecast) ** 2) ** 0.5)))
+                ** 2)
+
+    def _max_likelihood(self, resids, k_params):
+        """
+        Calculates Maximum Likelihood of residuals with respect of model's number of parameters
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param k_params: (int) Number of model's parameters
+        :return: (float) Maximum Log Likelihood
+        """
+        ln = len(resids)
+        var = np.std(resids, ddof=k_params) ** 2
+        return - ln * np.log(2 * np.pi) / 2 - ln * np.log(var) / 2 - np.sum(np.square(resids)) / (2 * var)
+
+    def aic(self, resids, k_params):
+        """
+        Calculates Akaike's Information Criterion of residuals with respect of model's number of parameters
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param k_params: (int) Number of model's parameters
+        :return: (float) AIC score
+        """
+        return 2 * k_params - 2 * self._max_likelihood(resids, k_params)
+
+    def aicc(self, resids, k_params):
+        """
+        Calculates Akaike's Information Criterion corrected of residuals with respect of model's number of parameters
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param k_params: (int) Number of model's parameters
+        :return: (float) AICc score
+        """
+        return self.aic(resids, k_params) + (2 * k_params) * (k_params + 1) / (len(resids) - k_params - 1)
+
+    def bic(self, resids, k_params):
+        """
+        Calculates Bayesian Information Criterion of residuals with respect of model's number of parameters
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param k_params: (int) Number of model's parameters
+        :return: (float) BIC score
+        """
+        return self.aic(resids, k_params) + (np.log(len(resids) - 2)) * k_params
+
+    def box_pierce(self, resids, lags=[10]):
+        """
+        Box-Pierce portmanteau test
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param lags: (int or list(int)) Lags to return test values
+        :return: (tuple(float)) Box-Pierce q-value and p-value
+        """
+        return tuple(acorr_ljungbox(resids, boxpierce=True, lags=[lags])[['bp_stat', 'bp_pvalue']].values[0])
+
+    def ljung_box(self, resids, lags=[10]):
+        """
+        Ljung-Box portmanteau test
+        :param resids: (numpy.ndarray) Residuals of the fitted model
+        :param lags: (int or list(int)) Lags to return test values
+        :return: (tuple(float)) Ljung-Box q-value and p-value
+        """
+        return tuple(acorr_ljungbox(resids, lags=[lags])[['lb_stat', 'lb_pvalue']].values[0])

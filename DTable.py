@@ -853,8 +853,8 @@ class DTable:
             else:
                 legend.append(f"{sc[0].strftime(legend_format[period])} - {sc[-1].strftime(legend_format[period])}")
 
-        return self._visualizer.plot_seasons(data_splits, f'{column} - ({period}/{freq})' if freq else column,
-                                             units, legend, axes)
+        return self._visualizer.plot_seasons(data_splits, name=f'{column} - ({period}/{freq})' if freq else column,
+                                             units=units, legend_lines=legend, axes=axes)
 
     def plot_shapes(self, columns, from_date=None, to_date=None, axes=None, freq=None):
         """
@@ -946,3 +946,21 @@ class DTable:
             while np.isnan(data[0]):
                 data = data[1:]
         return self._visualizer.plot_pacf(data, name=column, nlags=nlags, method=method, axes=axes)
+
+    def plot_moving_averages(self, column, period, axes=None):
+        return self._visualizer.plot_moving_averages(self.data[column], name=f'{column} - period {period}',
+                                                     period=period, units=self.attributes[column]['units'], axes=axes)
+
+    def plot_seasonality(self, column, period, trend_sign='sub', number_of_periods=1, axes=None):
+        return self._visualizer.plot_seasonality(self.data[column], name=f'{column} - period {period}',
+                                                 number_of_periods=number_of_periods, trend_sign=trend_sign,
+                                                 period=period, units=self.attributes[column]['units'], axes=axes)
+
+    def plot_classical_decomposition(self, column, period, number_of_periods=1, trend_sign='div', seasonal_sign='div'):
+        scale = self.attributes[column]['scale']
+        return self._visualizer.plot_classical_decomposition(self.data[column], self.data[scale],
+                                                             self.attributes[scale]['timezone'],
+                                                             name=f'{column} - period {period}',
+                                                             number_of_periods=number_of_periods, trend_sign=trend_sign,
+                                                             seasonal_sign=seasonal_sign, period=period,
+                                                             units=self.attributes[column]['units'])
