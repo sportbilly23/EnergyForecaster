@@ -636,7 +636,7 @@ class DTable:
         units = self.attributes[column]['units']
         for trans_dict in self.attributes[column]['transformations']:
             trans = str(trans_dict['func'])
-            units = f'{trans[trans.index('Preprocessor.') + 13: trans.index('<locals>') - 1]}({units})'
+            units = f"{trans[trans.index('Preprocessor.') + 13: trans.index('<locals>') - 1]}({units})"
         return units
 
     def scatter(self, column_1, column_2, reverse_transform=True, axes=False):
