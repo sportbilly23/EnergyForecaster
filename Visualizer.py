@@ -12,6 +12,17 @@ class Visualizer:
         self.datasets = None
 
     def _limit_xticks(self, data, axes, number_of_ticks=20, rotation=30, period=1, grid=False, text=True):
+        """
+        Transformation and limitation of xticks for better view
+        :param data: (numpy.ndarray/list) The data to plot
+        :param axes: (pyplot.axes) The axes where the plot taking place
+        :param number_of_ticks: (int) Maximum number of x ticks
+        :param rotation: (int) Rotation angle for numeration
+        :param period: (int) Period of the plot
+        :param grid: (bool) True to show grid
+        :param text: (bool) True to use data/text or False to use count of periods
+        :return: (None)
+        """
         plt.sca(axes)
         ln = len(data)
         tick_window = period
@@ -128,7 +139,7 @@ class Visualizer:
         Creates a plot to visualize variable into time
         :param scale: (numpy.ndarray) Scale data of the variable to plot
         :param data: (numpy.ndarray) Data of the variable to plot
-        :param name: (str) Names of the variable
+        :param name: (str) Name for title
         :param units: (str) Units of the variable
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
@@ -144,6 +155,15 @@ class Visualizer:
         return axes
 
     def plot_residuals(self, scale, resids, name='residuals', units='units', axes=None):
+        """
+        Plot residuals
+        :param scale: (numpy.ndarray) The scale data
+        :param resids: (numpy.ndarray) The residuals
+        :param name: (str) Name for title
+        :param units: (str) Units of the residuals
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         plt.interactive(True)
         if not axes:
             figure = plt.figure(self._get_next_figure_name('Residuals'))
@@ -225,6 +245,13 @@ class VisualizeData(Visualizer):
         return axes
 
     def _moving_averages(self, data, period, centering=True):
+        """
+        Returns moving averages data for a defined period
+        :param data: (numpy.ndarray) Data to extract moving averages
+        :param period: (int) Period of the moving averages
+        :param centering: (bool) True to execute a 2-MA after an even period MA to center data
+        :return: (numpy.ndarray) Moving average data
+        """
         ln = len(data)
         new_data = np.array([np.mean(data[i:period + i]) for i in range(ln - period + 1)])
         if centering and period % 2 == 0:
@@ -232,10 +259,23 @@ class VisualizeData(Visualizer):
         return new_data
 
     def _moving_average_data_offset(self, length, period):
+        """
+        Returns a function to use it for selecting the right slice of source with the created Moving Averages
+        :param length: (int) length of the source data
+        :param period: (int) period of MA
+        :return: (func) Function to create sliced data
+        """
         offset = period // 2
         return lambda x: x[offset: length - offset]
 
     def _get_trend_rest_data(self, data, period, trend_sign):
+        """
+        Separate trend data from the rest using classical decomposition (Moving Averages)
+        :param data: (numpy.ndarray) Data to decomposite
+        :param period: (int) Period of Moving Averages
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :return: (tuple(numpy.ndarray)) trend data and rest of the data
+        """
         trend = self._moving_averages(data, period)
         ln = len(data)
         if trend_sign == 'div':
@@ -244,18 +284,40 @@ class VisualizeData(Visualizer):
             return trend, self._moving_average_data_offset(ln, period)(data) - trend
 
     def _get_seasonality(self, detrend_data, period):
+        """
+        Get seasonality from the de-trended data using classical decomposition
+        :param detrend_data: (numpy.ndarray) De-trended data
+        :param period: (int) period of seasonality
+        :return: (numpy.ndarray) seasonal data
+        """
         ln = len(detrend_data)
         seasonal_means = np.nanmean(np.pad(detrend_data, (0, int(np.ceil(ln / period) * period - ln)),
                                            constant_values=np.nan).reshape(-1, period), axis=0)
         return np.tile(seasonal_means, (int(np.ceil(ln / period)),))[:ln]
 
     def _calibrate_seasonality(self, data, period, trend_sign):
+        """
+        Calibrate seasonal data
+        :param data: (numpy.ndarray) seasonal data of classical decomposition
+        :param period: (int) period of seasonality
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :return: (numpy.ndarray) calibrated seasonal data
+        """
         if trend_sign == 'div':
             return data / np.sum(data) * period
         elif trend_sign == 'sub':
             return data - np.sum(data) / len(data)
 
     def _plot_moving_averages(self, data, name, period, units='units', axes=None):
+        """
+        Plot Moving Averages data of the source data
+        :param data: (numpy.ndarray) source data
+        :param name: (str) name for the title
+        :param period: (int) period of moving averages
+        :param units: (str) units of the variable
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         plt.interactive(True)
         if not axes:
             figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
@@ -265,20 +327,32 @@ class VisualizeData(Visualizer):
         axes.set_title(f'{name}')
         axes.set_xlabel('time')
         axes.set_ylabel(units)
-        # tick_window = period
-        # count = 1
-        # while ln / tick_window > 20:
-        #     count += 1
-        #     tick_window = period * count
-        # plt.xticks(range(0, ln - tick_window // 2, tick_window),
-        #            [i * count for i in range(round(ln / tick_window))], rotation=30)
-        # plt.grid(True)
 
     def plot_moving_averages(self, data, name, period, units='units', axes=None):
+        """
+        Creating moving averages data and supplies _plot_moving_averages function to create the plot
+        :param data: (numpy.ndarray) source data
+        :param name: (str) name for the title
+        :param period: (int) period of moving averages
+        :param units: (str) units of the variable
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
         data_ = self._moving_averages(data, period)
         return self._plot_moving_averages(data_, name, period, units=units, axes=axes)
 
     def plot_seasonality(self, data, name, period, trend_sign='div', number_of_periods=1, units='units', axes=None):
+        """
+        Calculates seasonality data using classical decomposition and supplies _plot_seasonality function to create the plot
+        :param data: (numpy.ndarray) source data
+        :param name: (str) name for the title
+        :param period: (int) seasonal period
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :param number_of_periods: (int) number of periods to plot (None to plot all the data)
+        :param units: (str) units of the variable
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
         _, rest_data = self._get_trend_rest_data(data, period, trend_sign=trend_sign)
         seasons = self._calibrate_seasonality(self._get_seasonality(rest_data, period), period, trend_sign)
         if number_of_periods:
@@ -287,6 +361,15 @@ class VisualizeData(Visualizer):
         return self._plot_seasonality(seasons, name, period, units=units, axes=axes)
 
     def _plot_seasonality(self, data, name, period, units='units', axes=None):
+        """
+        Plot seasonality using classical decomposition on source data
+        :param data: (numpy.ndarray) source data
+        :param name: (str) name for the title
+        :param period: (int) seasonal period
+        :param units: (str) units of the variable
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         plt.interactive(True)
         if not axes:
             figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
@@ -296,24 +379,17 @@ class VisualizeData(Visualizer):
         axes.set_title(f'{name}')
         axes.set_xlabel('time')
         axes.set_ylabel(units)
-
-        # tick_window = period
-        # count = 1
-        # ln = len(data)
-        # while ln / tick_window > 20:
-        #     count += 1
-        #     tick_window = period * count
-        # plt.xticks(range(0, ln - tick_window // 2, tick_window),
-        #            [i * count for i in range(round(ln / tick_window))], rotation=30)
-        # plt.grid(True)
-
         return axes
 
-        res = sr / seasons
-        # Γράφημα υπολειμμάτων
-        ax_res.bar(range(len(ma)), res - 1, bottom=1)
-
     def _get_trend_seasonality_residuals(self, data, period, trend_sign, seasonal_sign):
+        """
+        Calculates trend, seasonal and residuals data after the application of classical decomposition
+        :param data: (numpy.ndarray) source data
+        :param period: (int) seasonal period
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :param seasonal_sign: (str) 'div' for multiplicative seasonality, 'sub' for additive seasonality
+        :return: (tuple(numpy.ndarray)) trend, seasonal and residuals data
+        """
         trend, rest_data = self._get_trend_rest_data(data, period, trend_sign)
         seasons = self._calibrate_seasonality(self._get_seasonality(rest_data, period), period, trend_sign)
         if seasonal_sign == 'sub':
@@ -324,6 +400,19 @@ class VisualizeData(Visualizer):
 
     def plot_classical_decomposition(self, data, scale, timezone, name, period, number_of_periods=None, units='units',
                                      trend_sign='div', seasonal_sign='div'):
+        """
+        Plot data, trend, seasonality and residuals using classical decomposition method
+        :param data: (numpy.ndarray) source data to applicate classical decomposition
+        :param scale: (numpy.ndarray) Scale data of the variable to plot
+        :param timezone: (pytz.timezone) The timezone of the scale
+        :param name: (str) name for the title
+        :param period: (int) seasonal period
+        :param number_of_periods: (int) number of periods to plot (None to plot all the data)
+        :param units: (str) units of the variable
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :param seasonal_sign: (str) 'div' for multiplicative seasonality, 'sub' for additive seasonality
+        :return: (None)
+        """
         trend, season, resids = self._get_trend_seasonality_residuals(data, period, trend_sign=trend_sign,
                                                                       seasonal_sign=seasonal_sign)
         plt.interactive(True)
@@ -358,6 +447,17 @@ class VisualizeData(Visualizer):
 class VisualizeResults(Visualizer):
 
     def plot_forecast(self, scale, actual, forecast, intervals=[], name='forecasts', units='units', axes=None):
+        """
+
+        :param scale: (numpy.ndarray) Scale data of the variable to plot
+        :param actual: (numpy.ndarray) Actual values of the variable to plot
+        :param forecast: (numpy.ndarray) Forecasting values of the variable to plot
+        :param intervals: (numpy.ndarray) Prediction intervals of the forecasts
+        :param name: (str) name for the title
+        :param units: (str) units of the variable
+        :param (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         intervals = [*zip(*intervals)]
         plt.interactive(True)
         if not axes:

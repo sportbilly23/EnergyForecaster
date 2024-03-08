@@ -167,6 +167,11 @@ class Process:
             return forecast
 
     def get_residuals(self, name):
+        """
+        Returns residuals of a model by name
+        :param name: (str) name of the model
+        :return: (numpy.ndarray) residuals of the model
+        """
         data = self.get_data()
         target = self.get_target().flatten()
         model = self._EF.data_controller._get_model(name)
@@ -249,6 +254,14 @@ class Process:
         return np.vstack(final_data).T
 
     def plot_residuals(self, name, start=0, steps=None, axes=None):
+        """
+        Gets residuals of a model and scale and supplies results_visualizer create a plot
+        :param name: (str) name of the model
+        :param start: (int) starting point for the plot
+        :param steps: (int) steps to depict on the plot
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
         resids = self.get_residuals(name)
         ln = len(resids)
         scale = self.get_scale()[start: start + steps if steps else ln - start]
@@ -258,12 +271,33 @@ class Process:
                                                    f'{name} residuals', axes=axes)
 
     def hist_residuals(self, name, bins=10, density=False, plot_norm=False, axes=None):
+        """
+        Gets residuals of a model and supplies results_visualizer to create a histogram plot
+        :param name: (str) name of the model
+        :param bins: (int) number of histogram bins
+        :param density: (bool) If True it creates probability density histogram
+        :param plot_norm: (bool) If True and also density is True, it draws a normal distribution with same mean and
+                                 standard deviation as these of the data.
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
         resids = self.get_residuals(name)
         self._EF.results_visualizer.hist(resids, f'{name} residuals', bins=bins, density=density,
                                          plot_norm=plot_norm, axes=axes)
 
     def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
                       intervals_from_residuals=True):
+        """
+        Gets forecasts of a model and supplies results_visualizer to create a plot
+        :param name: (str) name of the model
+        :param data_part: (str) The part of target data to get('train', 'validation', 'test')
+        :param start: (int) starting point for the plot
+        :param steps: (int) steps to depict on the plot
+        :param alpha: (float) alpha for prediction intervals
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :param intervals_from_residuals: (bool) True to create prediction interval from residuals distribution
+        :return: (pyplot.axes) axes of the plot
+        """
         alpha = min(alpha, 1 - alpha)
         forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
                                       alpha=None if intervals_from_residuals else alpha)

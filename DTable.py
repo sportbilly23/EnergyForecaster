@@ -1,7 +1,5 @@
 import numpy as np
-import datetime
-import pytz
-from utils import calculate_to_date
+import utils
 
 
 class DTable:
@@ -178,14 +176,6 @@ class DTable:
                              self._preprocessor.croston_method(self.data[column]),
                              assign)
 
-    def _get_tzinfo(self, tzone):
-        """
-        Gets tzinfo from a timezone
-        :param tzone: (str) Timezone label (eg. 'Europe/Athens')
-        :return: (DstTzInfo) Timezone Info
-        """
-        return datetime.datetime.now(pytz.timezone(tzone)).tzinfo
-
     def to_timestamp(self, column, form, tzone, assign=None, make_scale=True):
         """
         Transforms strings of dates to timestamps
@@ -199,7 +189,7 @@ class DTable:
         """
         if make_scale:
             self.attributes[column].update({'is_scale': True})
-            self.attributes[column].update({'timezone': self._get_tzinfo(tzone)})
+            self.attributes[column].update({'timezone': utils.get_tzinfo(tzone)})
         return self._inplace(column,
                              self._preprocessor.to_timestamp(self.data[column], form),
                              assign)
@@ -466,7 +456,7 @@ class DTable:
         self.attributes[column].update({'is_scale': True})
         self.attributes[column].update({'scale': None})
         if tzone:
-            self.attributes[column].update({'timezone': self._get_tzinfo(tzone)})
+            self.attributes[column].update({'timezone': utils.get_tzinfo(tzone)})
 
     def is_scale(self, column):
         """
@@ -948,19 +938,44 @@ class DTable:
         return self._visualizer.plot_pacf(data, name=column, nlags=nlags, method=method, axes=axes)
 
     def plot_moving_averages(self, column, period, axes=None):
+        """
+        Plot Moving Averages data for the given column
+        :param column: (str) Label of the column
+        :param period: (int) Period of the Moving Averages
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         return self._visualizer.plot_moving_averages(self.data[column], name=f'{column} - period {period}',
                                                      period=period, units=self.attributes[column]['units'], axes=axes)
 
     def plot_seasonality(self, column, period, trend_sign='sub', number_of_periods=1, axes=None):
+        """
+        Plot seasonality of the given data column with application of classical decomposition
+        :param column: (str) Label of the column
+        :param period: (int) Seasonality period
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :param number_of_periods: (int) number of periods to plot (None to plot all the data)
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
         return self._visualizer.plot_seasonality(self.data[column], name=f'{column} - period {period}',
                                                  number_of_periods=number_of_periods, trend_sign=trend_sign,
                                                  period=period, units=self.attributes[column]['units'], axes=axes)
 
     def plot_classical_decomposition(self, column, period, number_of_periods=1, trend_sign='div', seasonal_sign='div'):
+        """
+        Plot data, trend, seasonality and residuals using classical decomposition method on a data column
+        :param column: (str) Label of the column
+        :param period: (int) Seasonal period
+        :param number_of_periods: (int) number of periods to plot (None to plot all the data)
+        :param trend_sign: (str) 'div' for multiplicative trend, 'sub' for additive trend
+        :param seasonal_sign: (str) 'div' for multiplicative seasonality, 'sub' for additive seasonality
+        :return: (None)
+        """
         scale = self.attributes[column]['scale']
-        return self._visualizer.plot_classical_decomposition(self.data[column], self.data[scale],
-                                                             self.attributes[scale]['timezone'],
-                                                             name=f'{column} - period {period}',
-                                                             number_of_periods=number_of_periods, trend_sign=trend_sign,
-                                                             seasonal_sign=seasonal_sign, period=period,
-                                                             units=self.attributes[column]['units'])
+        self._visualizer.plot_classical_decomposition(self.data[column], self.data[scale],
+                                                      self.attributes[scale]['timezone'],
+                                                      name=f'{column} - period {period}',
+                                                      number_of_periods=number_of_periods, trend_sign=trend_sign,
+                                                      seasonal_sign=seasonal_sign, period=period,
+                                                      units=self.attributes[column]['units'])
