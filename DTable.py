@@ -727,7 +727,7 @@ class DTable:
         data, scale, units = self._plot_calculate_data_scale_units(column, from_date, to_date,
                                                                    reverse_transform, freq, func)
 
-        func_str = f'{str(func)[str(func).index('function ') + 9: str(func).index('at 0x') - 1]}'
+        func_str = f"{str(func)[str(func).index('function ') + 9: str(func).index('at 0x') - 1]}"
         self._visualizer.plot(scale, data,
                               f'{column} - {func_str}({freq})' if freq else column, units, axes=axes)
 
