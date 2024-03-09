@@ -183,7 +183,7 @@ class DataController:
         :return: (list[str]) Names of h5 files in data folder
         """
         return [f if full else os.path.splitext(f)[0]
-                for f in os.listdir(os.path.join('e:\\test', 'data')) if f.endswith('.h5')]
+                for f in os.listdir(os.path.join(self.path, 'data')) if f.endswith('.h5')]
 
     def is_dataset_changed(self, name):
         """
