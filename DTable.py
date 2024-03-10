@@ -300,7 +300,7 @@ class DTable:
         :return: (numpy.ndarray) Monthly numbers of weekdays between two dates
         """
         return self._inplace(None,
-                             self._preprocessor.month_weekdays(self, from_year_month, to_year_month),
+                             self._preprocessor.month_weekdays(from_year_month, to_year_month),
                              assign)
 
     def public_holidays(self, column, holidays, assign=None):
