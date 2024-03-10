@@ -365,7 +365,7 @@ class Preprocessor:
         :param mode: (str) "var"/"one-hot"/"cos-sin"
         :return: (numpy.array) Week of year indicators
         """
-        days = self.weekday(data, time_zone)
+        days = self.weekday(data, time_zone, mode='var')
         prev_week = week = prev_year = -1
         weeks = []
         for day_i, date_j in zip(days[1:], data):

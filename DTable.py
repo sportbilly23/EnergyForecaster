@@ -25,7 +25,7 @@ class DTable:
         return self.data.__getitem__(item)
 
     # TODO: Θα μπούνε οι συναρτήσεις που δημιουργούν γραφήματα, στατιστικά και μετατροπές για δεδομένα ενός πίνακα
-    def log(self, base, column, assign=None):
+    def log(self, column, base, assign=None):
         """
         Data logarithmic transformation
         :param base: (int) Base of the logarithm transformation

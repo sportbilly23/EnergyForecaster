@@ -126,5 +126,6 @@ if __name__ == '__main__':
     # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7*24, number_of_periods=3, trend_sign='div')
     # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7 * 24, number_of_periods=3, trend_sign='sub')
     # sb2.plot_classical_decomposition('ES_load_actual_entsoe_transparency', 168, number_of_periods=3, trend_sign='sub', seasonal_sign='sub')
+    sb.year_week('time')
     print(time.time())
 
