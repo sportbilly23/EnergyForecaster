@@ -354,7 +354,7 @@ class DataController:
         :return: (None)
         """
         bts = dill.dumps(obj)
-        file[path].attrs[attribute] = np.array([b.to_bytes() for b in bts])
+        file[path].attrs[attribute] = np.array([b.to_bytes(length=1, byteorder='big') for b in bts])
 
     def get_attribute_object(self, attribute, f, path='/'):
         """
