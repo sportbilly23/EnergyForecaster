@@ -7,14 +7,17 @@ def calculate_to_date(to_date):
     """
     Giving a date in a tuple of integers, it returns the maximum computer date representation for this date
     ex. For the date (2012, 3, 1), it returns (2012, 3, 1, 23, 59, 59, 999999)
-    :param to_date:
-    :return:
+    :param to_date: (tuple(int)) the date
+    :return: (tuple(int)) maximum computer date representation for the source date
     """
     ln = len(to_date)
-    a = datetime.datetime(*to_date) + \
-        datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5), seconds=(ln == 6),
-                           microseconds=(ln == 7)) - datetime.timedelta(microseconds=1)
-    return tuple(list(datetime.datetime.timetuple(a)[:-3]) + [a.microsecond])
+    if ln < 3:
+        to_date = tuple(1 if i >= ln else to_date[i] + (1 if i == ln - 1 else 0) for i in range(3))
+        to_date = datetime.datetime(*to_date) - datetime.timedelta(microseconds=1)
+    else:
+        to_date = datetime.datetime(*to_date) + datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5), seconds=(ln == 6),
+                                                                   microseconds=(ln == 7))
+    return tuple(list(datetime.datetime.timetuple(to_date)[:-3]) + [to_date.microsecond])
 
 
 def get_tzinfo(tzone):

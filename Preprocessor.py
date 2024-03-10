@@ -560,6 +560,9 @@ class Preprocessor:
         """
         try:
             to_date = calculate_to_date(to_date)
+            ln = len(from_date)
+            if ln < 3:
+                from_date = tuple(1 if i >= ln else from_date[i] for i in range(3))
             from_date = datetime.datetime(*from_date, tzinfo=tz).timestamp()
             to_date = datetime.datetime(*to_date, tzinfo=tz).timestamp()
             ln = len(scale)
@@ -583,7 +586,7 @@ class Preprocessor:
         for s in timestamps:
             s = datetime.datetime.fromtimestamp(s, tz=tz)
             dates.append(datetime.datetime(s.year,
-                                           s.month if periods[freq] > 0 else 0,
+                                           s.month if periods[freq] > 0 else 1,
                                            s.day if periods[freq] > 1 else 1,
                                            s.hour if periods[freq] > 3 else 0,
                                            s.minute if periods[freq] > 4 else 0,
@@ -605,7 +608,7 @@ class Preprocessor:
         Change frequency of data in a given time interval
         :param data: (numpy.ndarray) Data to be used
         :param scale: (numpy.ndarray) Time scale of the given data
-        :param freq: (str) Frequency to categorize data
+        :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
         :param from_date: (list(int)) Starting date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
         :param to_date: (list(int)) Ending date as a list (Year, Month, Day, Hour, Minute, Second, Microsecond)
         :param tz: (pytz.timezone) Timezone
