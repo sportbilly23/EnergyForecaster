@@ -432,7 +432,7 @@ class Preprocessor:
         from_year, from_month = from_year_month
         to_year, to_month = to_year_month
         all_months = (to_year - from_year - 1) * 12 + 13 - from_month + to_month
-        weekdays = np.zeros(shape=(all_months,), dtype=[(WEEKDAYS(i), np.uint8) for i in range(7)])
+        weekdays = np.zeros(shape=(all_months,), dtype=[(WEEKDAYS[i], np.uint8) for i in range(7)])
         month = 0
         for current_year in range(from_year, to_year + 1):
             for current_month in range(from_month if current_year == from_year else 1,
