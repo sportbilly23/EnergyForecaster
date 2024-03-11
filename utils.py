@@ -13,6 +13,8 @@ def calculate_to_date(to_date):
     ln = len(to_date)
     if ln < 3:
         to_date = tuple(1 if i >= ln else to_date[i] + (1 if i == ln - 1 else 0) for i in range(3))
+        if to_date[1] == 13:
+            to_date = (to_date[0] + 1, 1, to_date[2])
         to_date = datetime.datetime(*to_date) - datetime.timedelta(microseconds=1)
     else:
         to_date = datetime.datetime(*to_date) + datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5), seconds=(ln == 6),
