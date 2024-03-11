@@ -308,7 +308,7 @@ class VisualizeData(Visualizer):
         elif trend_sign == 'sub':
             return data - np.sum(data) / len(data)
 
-    def _plot_moving_averages(self, data, name, period, units='units', axes=None):
+    def _plot_moving_averages(self, scale, data, name, period, units='units', axes=None):
         """
         Plot Moving Averages data of the source data
         :param data: (numpy.ndarray) source data
@@ -322,15 +322,16 @@ class VisualizeData(Visualizer):
         if not axes:
             figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
             axes = figure.subplots()
-        self._limit_xticks(data, axes, period=period, grid=True)
+        self._limit_xticks(scale, axes, period=period, grid=True)
         axes.plot(data)
         axes.set_title(f'{name}')
         axes.set_xlabel('time')
         axes.set_ylabel(units)
 
-    def plot_moving_averages(self, data, name, period, units='units', axes=None):
+    def plot_moving_averages(self, scale, data, name, period, units='units', axes=None):
         """
         Creating moving averages data and supplies _plot_moving_averages function to create the plot
+        :param scale: (numpy.ndarray) scale of data
         :param data: (numpy.ndarray) source data
         :param name: (str) name for the title
         :param period: (int) period of moving averages
@@ -338,8 +339,10 @@ class VisualizeData(Visualizer):
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) axes of the plot
         """
+        ln = len(data)
         data_ = self._moving_averages(data, period)
-        return self._plot_moving_averages(data_, name, period, units=units, axes=axes)
+        scale_ = self._moving_average_data_offset(ln, period)(scale)
+        return self._plot_moving_averages(scale_, data_, name, period, units=units, axes=axes)
 
     def plot_seasonality(self, data, name, period, trend_sign='div', number_of_periods=1, units='units', axes=None):
         """
@@ -398,13 +401,12 @@ class VisualizeData(Visualizer):
             resids = rest_data / seasons
         return trend, seasons, resids
 
-    def plot_classical_decomposition(self, data, scale, timezone, name, period, number_of_periods=None, units='units',
+    def plot_classical_decomposition(self, data, scale, name, period, number_of_periods=None, units='units',
                                      trend_sign='div', seasonal_sign='div'):
         """
         Plot data, trend, seasonality and residuals using classical decomposition method
         :param data: (numpy.ndarray) source data to applicate classical decomposition
         :param scale: (numpy.ndarray) Scale data of the variable to plot
-        :param timezone: (pytz.timezone) The timezone of the scale
         :param name: (str) name for the title
         :param period: (int) seasonal period
         :param number_of_periods: (int) number of periods to plot (None to plot all the data)
@@ -422,14 +424,13 @@ class VisualizeData(Visualizer):
         slice = lambda x: x[:period * number_of_periods] if number_of_periods else x
 
         data_ = slice(data)
-        scale_ = slice(utils.timestamp_to_date_str(scale, timezone))
+        scale_ = slice(scale)
 
         self._limit_xticks(scale_, axes[0], number_of_ticks=10, rotation=5, text=True, grid=True)
         self.plot(scale_, data_, '', units, axes=axes[0])
         plt.suptitle(f'{name} - data / trend / seasonality / residuals - period {period}')
 
-        scale__ = slice(utils.timestamp_to_date_str(self._moving_average_data_offset(len(scale), period)(scale),
-                                                    timezone))
+        scale__ = slice(self._moving_average_data_offset(len(scale), period)(scale))
         trend_ = slice(trend)
         season_ = slice(season)
         resids_ = slice(resids)

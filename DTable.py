@@ -945,7 +945,8 @@ class DTable:
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
-        return self._visualizer.plot_moving_averages(self.data[column], name=f'{column} - period {period}',
+        scale = self._get_scale_strings(column)
+        return self._visualizer.plot_moving_averages(scale, self.data[column], name=f'{column} - period {period}',
                                                      period=period, units=self.attributes[column]['units'], axes=axes)
 
     def plot_seasonality(self, column, period, trend_sign='sub', number_of_periods=1, axes=None):
@@ -962,6 +963,11 @@ class DTable:
                                                  number_of_periods=number_of_periods, trend_sign=trend_sign,
                                                  period=period, units=self.attributes[column]['units'], axes=axes)
 
+    def _get_scale_strings(self, column):
+        scale = self.attributes[column]['scale']
+        timezone = self.attributes[scale]['timezone']
+        return utils.timestamp_to_date_str(self.data[scale], timezone)
+
     def plot_classical_decomposition(self, column, period, number_of_periods=1, trend_sign='div', seasonal_sign='div'):
         """
         Plot data, trend, seasonality and residuals using classical decomposition method on a data column
@@ -972,10 +978,8 @@ class DTable:
         :param seasonal_sign: (str) 'div' for multiplicative seasonality, 'sub' for additive seasonality
         :return: (None)
         """
-        scale = self.attributes[column]['scale']
-        self._visualizer.plot_classical_decomposition(self.data[column], self.data[scale],
-                                                      self.attributes[scale]['timezone'],
-                                                      name=f'{column} - period {period}',
+        scale = self._get_scale_strings(column)
+        self._visualizer.plot_classical_decomposition(self.data[column], scale, name=f'{column} - period {period}',
                                                       number_of_periods=number_of_periods, trend_sign=trend_sign,
                                                       seasonal_sign=seasonal_sign, period=period,
                                                       units=self.attributes[column]['units'])
