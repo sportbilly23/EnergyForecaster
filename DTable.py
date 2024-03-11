@@ -959,7 +959,8 @@ class DTable:
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
-        return self._visualizer.plot_seasonality(self.data[column], name=f'{column} - period {period}',
+        scale = self._get_scale_strings(column)
+        return self._visualizer.plot_seasonality(scale, self.data[column], name=f'{column} - period {period}',
                                                  number_of_periods=number_of_periods, trend_sign=trend_sign,
                                                  period=period, units=self.attributes[column]['units'], axes=axes)
 

@@ -125,7 +125,7 @@ if __name__ == '__main__':
     #                                             intervals_from_residuals=True, alpha=0.55)
     # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7*24, number_of_periods=3, trend_sign='div')
     # axes = sb2.plot_seasonality('ES_load_actual_entsoe_transparency', 7 * 24, number_of_periods=3, trend_sign='sub')
-    # sb2.plot_classical_decomposition('ES_load_actual_entsoe_transparency', 168, number_of_periods=3, trend_sign='sub', seasonal_sign='sub')
-    sb2.plot_moving_averages('ES_load_actual_entsoe_transparency', period=7 * 24)
+    sb2.plot_classical_decomposition('ES_load_actual_entsoe_transparency', 168, number_of_periods=3, trend_sign='sub', seasonal_sign='sub')
+    # sb2.plot_seasonality('ES_load_actual_entsoe_transparency', period=7 * 24, number_of_periods=4)
     print(time.time())
 

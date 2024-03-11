@@ -31,7 +31,7 @@ class Visualizer:
             count += 1
             tick_window = period * count
         plt.xticks(range(0, ln - tick_window // 2, tick_window),
-                   [data[i * count] for i in range(round(ln / tick_window))] if text else\
+                   [data[i * count * period] for i in range(round(ln / tick_window))] if text else\
                    [i * count for i in range(round(ln / tick_window))], rotation=rotation)
         plt.grid(grid)
 
@@ -344,9 +344,10 @@ class VisualizeData(Visualizer):
         scale_ = self._moving_average_data_offset(ln, period)(scale)
         return self._plot_moving_averages(scale_, data_, name, period, units=units, axes=axes)
 
-    def plot_seasonality(self, data, name, period, trend_sign='div', number_of_periods=1, units='units', axes=None):
+    def plot_seasonality(self, scale, data, name, period, trend_sign='div', number_of_periods=1, units='units', axes=None):
         """
         Calculates seasonality data using classical decomposition and supplies _plot_seasonality function to create the plot
+        :param scale: (numpy.ndarray) scale of data
         :param data: (numpy.ndarray) source data
         :param name: (str) name for the title
         :param period: (int) seasonal period
@@ -360,12 +361,14 @@ class VisualizeData(Visualizer):
         seasons = self._calibrate_seasonality(self._get_seasonality(rest_data, period), period, trend_sign)
         if number_of_periods:
             seasons = seasons[:number_of_periods * period]
+            scale_ = scale[:number_of_periods * period]
 
-        return self._plot_seasonality(seasons, name, period, units=units, axes=axes)
+        return self._plot_seasonality(scale_, seasons, name, period, units=units, axes=axes)
 
-    def _plot_seasonality(self, data, name, period, units='units', axes=None):
+    def _plot_seasonality(self, scale, data, name, period, units='units', axes=None):
         """
         Plot seasonality using classical decomposition on source data
+        :param scale: (numpy.ndarray) scale of data
         :param data: (numpy.ndarray) source data
         :param name: (str) name for the title
         :param period: (int) seasonal period
@@ -377,7 +380,7 @@ class VisualizeData(Visualizer):
         if not axes:
             figure = plt.figure(self._get_next_figure_name('Moving Averages Plot'))
             axes = figure.subplots()
-        self._limit_xticks(data, axes, period=period, grid=True)
+        self._limit_xticks(scale, axes, period=period, grid=True)
         axes.plot(data)
         axes.set_title(f'{name}')
         axes.set_xlabel('time')
