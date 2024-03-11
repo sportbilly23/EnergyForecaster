@@ -868,7 +868,7 @@ class DTable:
                 if not np.array_equal(scale, scale_):
                     raise ValueError('Scales not matching')
 
-        return self._visualizer.plot_schemas(scale, datas, columns, axes)
+        return self._visualizer.plot_shapes(scale, datas, columns, axes)
 
     def _get_multi_differenciated_column(self, column, diffs):
         """
