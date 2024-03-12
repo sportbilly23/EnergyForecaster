@@ -26,11 +26,14 @@ class Process:
     def __eq__(self, other):
         try:
             assert self.name == other.name
-            for d in self.data:
-                assert utils.arrays_are_equal(self.data[d], other.data[d])
-            assert utils.arrays_are_equal(self.scale, other.scale)
-            for t in self.target:
-                assert utils.arrays_are_equal(self.target[t], other.target[t])
+            if self.data:
+                for d in self.data:
+                    assert utils.arrays_are_equal(self.data[d], other.data[d])
+            if self.target:
+                for t in self.target:
+                    assert utils.arrays_are_equal(self.target[t], other.target[t])
+            if self.data or self.target:
+                assert utils.arrays_are_equal(self.scale, other.scale)
             assert self.train == other.train
             assert self.validation == other.validation
             assert self.test == other.test

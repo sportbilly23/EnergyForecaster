@@ -366,8 +366,6 @@ class DataController:
         """
         return dill.loads(b''.join([b'\x00' if i == b'' else i for i in f[path].attrs[attribute]]))
 
-    # def set_scale
-
     def _create_npstructure(self, splits: list, headline: bool) -> np.ndarray:
         """
         Creates the numpy.ndarray object that contains all information of a csv file. If no headers concluded, it
