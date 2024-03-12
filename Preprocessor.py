@@ -368,7 +368,7 @@ class Preprocessor:
         days = self.weekday(data, time_zone, mode='var')
         prev_week = week = prev_year = -1
         weeks = []
-        for day_i, date_j in zip(days[1:], data):
+        for day_i, date_j in zip(days, data):
             current_year = datetime.datetime.fromtimestamp(date_j).astimezone(self._time_zone(time_zone)).year
             if current_year != prev_year:
                 prev_year = current_year
