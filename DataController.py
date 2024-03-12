@@ -544,7 +544,7 @@ class DataController:
         :return: (list[str]) Names of h5 files in data folder
         """
         return [f if full else os.path.splitext(f)[0]
-                for f in os.listdir(os.path.join('e:\\test', 'models')) if f.endswith('.pkl')]
+                for f in os.listdir(os.path.join(self.path, self.name, 'models')) if f.endswith('.pkl')]
 
     def get_process_names(self):
         """
