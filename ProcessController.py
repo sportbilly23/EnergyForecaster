@@ -23,6 +23,28 @@ class Process:
         self.black_lags = tuple(np.arange(black_lags) * target_length)
         self._EF = EF
 
+    def __eq__(self, other):
+        try:
+            assert self.name == other.name
+            for d in self.data:
+                assert utils.arrays_are_equal(self.data[d], other.data[d])
+            assert utils.arrays_are_equal(self.scale, other.scale)
+            for t in self.target:
+                assert utils.arrays_are_equal(self.target[t], other.target[t])
+            assert self.train == other.train
+            assert self.validation == other.validation
+            assert self.test == other.test
+            assert self.models == other.models
+            assert self.target_length == other.target_length
+            assert self.timezone == other.timezone
+            assert self.lags == other.lags
+            assert self.black_lags == other.black_lags
+            assert self._EF.data_controller.path == other._EF.data_controller.path
+            assert self._EF.data_controller.name == other._EF.data_controller.name
+        except AssertionError:
+            return False
+        return True
+
     def get_model(self, name):
         """
         Get model from file by name
@@ -413,8 +435,9 @@ class ProcessController:
         """
         if self.is_process_changed():
             yn = input("Process has been changed. Are you sure you want to close it? (Type 'yes' to close): ")
-            if yn.upper() == 'YES':
-                self.process = None
+            if yn.upper() != 'YES':
+                return
+        self.process = None
 
     def update_process(self):
         """

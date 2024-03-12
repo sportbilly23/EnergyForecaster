@@ -624,11 +624,11 @@ class DataController:
         :param process: (Process) The process to be checked
         :return: (bool) True if current process have changes between RAM and file.
         """
-        name = process.name
-        with h5py.File(os.path.join(self.path, self.name + '.h5'), 'r') as f:
-            proc = self._get_process_by_name(name, f)
-        proc.update({'name': name})
-        return proc != process
+        if process:
+            name = process.name
+            with h5py.File(os.path.join(self.path, self.name + '.h5'), 'r') as f:
+                proc = self._get_process_by_name(name, f)
+            return proc != process
 
     def remove_process(self, name):
         """
