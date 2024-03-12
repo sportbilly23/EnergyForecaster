@@ -42,8 +42,8 @@ class Process:
             assert self._EF.data_controller.path == other._EF.data_controller.path
             assert self._EF.data_controller.name == other._EF.data_controller.name
         except AssertionError:
-            return False
-        return True
+            return True
+        return False
 
     def get_model(self, name):
         """
