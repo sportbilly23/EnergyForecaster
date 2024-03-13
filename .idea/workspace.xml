@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="37c80fc9-0dbf-4a7c-93d2-57f2be670906" name="Changes" comment="fix errors">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -327,7 +326,15 @@
       <option name="project" value="LOCAL" />
       <updated>1710266161873</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="fix errors">
+      <option name="closed" value="true" />
+      <created>1710279784766</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1710279784766</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

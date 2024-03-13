@@ -290,7 +290,7 @@ class Process:
         resids = self.get_residuals(name)
         ln = len(resids)
         scale = self.get_scale()[start: start + steps if steps else ln - start]
-        scale_str = utils.timestamp_to_date_str(scale)
+        scale_str = utils.timestamp_to_date_str(scale, self.timezone)
         self._EF.results_visualizer.plot_residuals(scale_str,
                                                    resids[start: start + steps if steps else ln - start],
                                                    f'{name} residuals', axes=axes)
