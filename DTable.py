@@ -651,14 +651,14 @@ class DTable:
         if self._compatible_data([column_1, column_2]) and self._no_scale_in_data([column_1, column_2]):
             if reverse_transform:
                 return self._visualizer.scatter(self.reverse_trans(column_1), self.reverse_trans(column_2),
-                                                {1: column_1, 2: column_2},
-                                                {1: self.attributes[column_1]['units'],
-                                                 2: self.attributes[column_2]['units']},
+                                                (column_1, column_2),
+                                                (self.attributes[column_1]['units'],
+                                                 self.attributes[column_2]['units']),
                                                 axes=axes)
             else:
                 return self._visualizer.scatter(self.data[column_1], self.data[column_2],
-                                                {1: column_1, 2: column_2},
-                                                {1: self.get_units(column_1), 2: self.get_units(column_2)},
+                                                (column_1, column_2),
+                                                (self.get_units(column_1), self.get_units(column_2)),
                                                 axes=axes)
 
     def downgrade_data_frequency(self, column, freq, from_date=None, to_date=None, func=np.sum, reverse_transform=True):

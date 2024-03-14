@@ -53,3 +53,8 @@ def timestamp_to_date_str(dates, timezone):
     :return: (numpy.ndarray) string dates
     """
     return np.array([datetime.datetime.fromtimestamp(i, tz=timezone).strftime('%d/%m/%y %H:%M:%S') for i in dates])
+
+
+def find_timezones_by_offset(offset_seconds):
+    return [repr(get_tzinfo(i)) for i in list(pytz.all_timezones_set) if
+            get_tzinfo(i)._utcoffset.days * 86400 + get_tzinfo(i)._utcoffset.seconds == offset_seconds]
