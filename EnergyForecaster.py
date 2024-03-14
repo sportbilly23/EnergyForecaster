@@ -43,7 +43,7 @@ if __name__ == '__main__':
     ef.data_controller.get_dataset('sb')
     sb = ef.data_controller.datasets['sb']
     sb2 = ef.data_controller.datasets['sb2']
-    ef.data_controller.import_csv('C:\\Users\\sportbilly\\Downloads\\consumption.csv', h5_name='test')
+    # ef.data_controller.import_csv('C:\\Users\\sportbilly\\Downloads\\consumption.csv', h5_name='test')
     # sb.to_timestamp('time', '%Y-%m-%d %H:%M:%S', assign='inplace', tzone='utc')
     # sb.minmax(column='temperature', assign='inplace')
     # sb.set_units('temperature', 'oC')
@@ -128,5 +128,6 @@ if __name__ == '__main__':
     # sb2.plot_classical_decomposition('ES_load_actual_entsoe_transparency', 168, number_of_periods=3, trend_sign='sub', seasonal_sign='sub')
     # sb2.plot_seasonality('ES_load_actual_entsoe_transparency', period=7 * 24, number_of_periods=4)
     # ef.process_controller.close_process()
+    ef.data_controller.import_csv('F:/My Drive/data/apartment-weather/apartment2014.csv')
     print(time.time())
 

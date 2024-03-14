@@ -491,7 +491,7 @@ class DataController:
                     for tp in types[c]:
                         if c < 2:
                             info = np.iinfo(tp)
-                            if tp(min_) < info.min or tp(max_) > info.max:
+                            if np.float64(min_) < info.min or np.float64(max_) > info.max:
                                 continue
                         self._cast_string_with_nan(mask, tp)
                         return tp
