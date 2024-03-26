@@ -1,37 +1,42 @@
 Statistics είναι η κλάση η οποία παρέχει στατιστικές για τα δεδομένα τα οποία κρατούνται στην μνήμη του DC και για τα
-αποτελέσματα τα οποία κρατούνται στην κλάση Results των μοντέλων που συμμετέχουν σε διεργασίες της κλάσης Processes.
-Παρέχει τεστ portmanteau, τεστ αυτοσυσχέτισης, unit tests, υπολογισμούς συσχέτισης Pearson και Spearman κλπ.
+αποτελέσματα τα οποία χειριζόμαστε από την κλάση ProcessController. Παρέχει τεστ portmanteau, τεστ αυτοσυσχέτισης, unit
+tests, υπολογισμούς συσχέτισης Pearson και Spearman κλπ.
 
-Είσοδος
--------
-EF                      To στιγμιότυπο του EnergyForcaster στο οποίο ανήκει
-DC_list     (dict)      Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στον DC.
-
-Χαρακτηριστικά
---------------
-_EF                     Ο EnergyForecaster στον οποίο ανήκει
-process_files           Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στην μνήμη του DC.
+Χαρακτηριστικά Statistics
+-------------------------
+_EF                     To στιγμιότυπο του EnergyForcaster στο οποίο ανήκει
+datasets     (dict)     Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στον DC.
 
 
-Συναρτήσεις
------------
+Συναρτήσεις Statistics
+----------------------
+mean                    Επιστρέφει την μέση τιμή ενός συνόλου δεδομένων
+std                     Επιστρέφει την τυπική απόκλιση ενός συνόλου δεδομένων
+pearson_correlation     Επιστρέφει την συσχέτιση (Pearson) δύο συνόλων δεδομένων
+spearman_correlation    Επιστρέφει την συσχέτιση (Spearman) δύο συνόλων δεδομένων
+acf                     Επιστρέφει την αυτοσυσχέτιση ενός συνόλου δεδομένων
+pacf                    Επιστρέφει την μερική αυτοσυσχέτιση ενός συνόλου δεδομένων
 
-Statistics
-  R	01)   	Box-Pierce test (portmanteau, αυτοσυσχέτιση υπολειμμάτων)
-  R	02)   	Ljung-Box test (portmanteau, αυτοσυσχέτιση υπολειμμάτων)
-  R	03)   	Breusch-Godfrey test (autocorrelation, αυτοσυσχέτιση υπολειμμάτων, ανάγκη διαφοροποίησης)
-  D	04)  v	KPSS test (unit, ανάγκη διαφοροποίησης)
-  D	05)  v 	ADF test (unit, ανάγκη διαφοροποίησης)
-  D	06)  v	Z-score (outliers)
-  D	07)  v 	Complexity Estimate (predictability)
-  D	08)  v 	Mean Absolute Change (predictability)
-  D	09)  v 	Apprximate Entropy (predictability)
-  D	10)  v 	Pearson Correlation (Συσχέτιση μεταξύ δύο μεταβλητών με κανονική κατανομή)
-  D	11)  v 	Spearman Correlation (Συσχέτιση μεταξύ δύο μεταβλητών με μη κανονική κατανομή)
-  R	12)   	MAPE (metrics) 
-  R	13)   	MAE (metrics)
-  R	14)   	RMSE (metrics)
-  M	15)   	R^2 (metrics)
-  M	16)   	AIC (metrics)
-  M	17)   	AICc (metrics)
-  M	18)   	BIC (metrics)
+
+Συναρτήσεις StatsData
+---------------------
+mape                    Υπολογίζει το μέσο απόλυτο ποσοστιαίο σφάλμα (MAPE) μεταξύ δύο συνόλων δεδομένων, των προβλέψεων και των πραγματικών τιμών
+mae                     Υπολογίζει το μέσο απόλυτο σφάλμα των προβλέψεων (MAE) μεταξύ δύο συνόλων δεδομένων, των προβλέψεων και των πραγματικών τιμών
+rmse                    Υπολογίζει την ρίζα του μέσου τετραγωνικού σφάλματος (RMSE) μεταξύ δύο συνόλων δεδομένων, των προβλέψεων και των πραγματικών τιμών
+mse                     Υπολογίζει το μέσο τετραγωνικό σφάλμα των προβλέψεων (MSE) μεταξύ δύο συνόλων δεδομένων, των προβλέψεων και των πραγματικών τιμών
+r2                      Υπολογίζει το R squared σφάλμα των προβλέψεων (R-squared) μεταξύ δύο συνόλων δεδομένων, των προβλέψεων και των πραγματικών τιμών
+aic                     Υπολογίζει το Akaike information criterion (AIC) των υπολειμμάτων της εκπαίδευσης ενός μοντέλου
+aicc                    Υπολογίζει το σταθμισμένο Akaike information criterion (AICc) των υπολειμμάτων της εκπαίδευσης ενός μοντέλου
+bic                     Υπολογίζει το Bayesian information criterion (ΒIC) των υπολειμμάτων της εκπαίδευσης ενός μοντέλου
+box_pierce              Εκτέλεση του Box-Pierce test (portmanteau) για τα υπολείμματα ενός μοντέλου
+ljung_box               Εκτέλεση του Ljung-Box test (portmanteau) για τα υπολείμματα ενός μοντέλου
+
+
+Συναρτήσεις StatsResults
+------------------------
+kpss                    Εκτέλεση του (unit root test) Kwiatkowski-Phillips-Schmidt-Shin σε σύνολο δεδομένων
+adf                     Εκτέλεση του (unit root test) Augmented Dickey-Fuller σε σύνολο δεδομένων
+zscore                  Επιστρέφει τα z-score των δεδομένων ενός συνόλου δεδομένων
+complexity_estimate     Υπολογίζει το Complexity Estimation ενός συνόλου δεδομένων
+mean_absolute_change    Υπολογίζει το Mean Absolute Change ενός συνόλου δεδομένων
+approximate_entropy     Υπολογίζει το Approximate Entropy ενός συνόλου δεδομένων

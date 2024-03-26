@@ -24,7 +24,6 @@ class DTable:
     def __getitem__(self, item):
         return self.data.__getitem__(item)
 
-    # TODO: Θα μπούνε οι συναρτήσεις που δημιουργούν γραφήματα, στατιστικά και μετατροπές για δεδομένα ενός πίνακα
     def log(self, column, base, assign=None):
         """
         Data logarithmic transformation
@@ -610,7 +609,7 @@ class DTable:
 
     def mean(self, column, reverse_trans=True):
         """
-
+        Returns mean value of a column
         :param column: (str) Label of the column
         :param reverse_trans: (bool) Calculate on reverse transformed data
         :return: (float) Mean of the data
@@ -619,7 +618,7 @@ class DTable:
 
     def std(self, column, dof=1, reverse_trans=True):
         """
-        Returns the standard deviation of the data
+        Returns the standard deviation of a column
         :param column: (str) Label of the column
         :param dof: (int) Degrees of freedom to use for the calculations
         :param reverse_trans: (bool) Calculate on reverse transformed data
