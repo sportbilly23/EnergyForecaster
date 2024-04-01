@@ -473,6 +473,7 @@ class VisualizeResults(Visualizer):
         axes.set_title(f'{name}')
         axes.set_xlabel('time')
         axes.set_ylabel(units)
+        axes.legend(labels=['actuals', 'forecasts'])
         plt.xticks(scale if len(scale) <= 20 else scale[np.round(np.linspace(0, len(scale) - 1, 20),
                                                                  0).astype(np.int64).tolist()], rotation=30)
 

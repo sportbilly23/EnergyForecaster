@@ -2,7 +2,17 @@ import utils
 from DictNoDupl import DictNoDupl
 import numpy as np
 import pytz
-import datetime
+from scipy.stats import norm
+from Models import *
+
+
+CMDS = {'process_controller': ['set_process', 'get_process', 'update_process', 'insert_data'],
+        'data_controller': ['import_csv', 'get_dataset', 'update_dataset'],
+        'preprocessor': ['log', 'log2', 'log10', 'ln', 'exp', 'exp2', 'boxcox', 'limit_output', 'minmax', 'standard',
+                         'robust', 'differentiate', 'croston_method', 'to_timestamp', 'weekend', 'weekday', 'monthday',
+                         'day_hour', 'year_day', 'year_week', 'year_month', 'month_weekdays', 'public_holidays',
+                         'lagged_series', 'fill_backward', 'fill_forward', 'fill_linear', 'downgrade_data_frequency',
+                         'attach_scale', 'make_target']}
 
 
 class Process:
@@ -16,7 +26,7 @@ class Process:
         self.validation = validation
         self.test = test
         self.models = models
-        # self.attributes = DictNoDupl()
+        self.attributes = DictNoDupl()
         self.target_length = target_length
         self.timezone = timezone
         self.lags = (black_lags * target_length,) + tuple((np.arange(1, lags) + black_lags) * target_length)
@@ -48,6 +58,27 @@ class Process:
             return True
         return False
 
+    def get_units(self, column):
+        """
+        Returns the units of a column with respect of transformations
+        :param column: (str) Label of the column
+        :return: (str) Units of a column with respect of transformations
+        """
+        units = self.attributes[column]['units']
+        for trans_dict in self.attributes[column]['transformations']:
+            trans = str(trans_dict['func'])
+            units = f"{trans[trans.index('Preprocessor.') + 13: trans.index('<locals>') - 1]}({units})"
+        return units
+
+    def reverse_trans(self, column):
+        """
+        Returns data applying reverse transformation functions
+        :param column: (str) Label of the column
+        :return: (numpy.ndarray) Initial data of a column (before transformations)
+        """
+        source = self.target if column in self.target else self.data
+        return self._EF.preprocessor.reverse_trans(source[column], self.attributes[column]['transformations'])
+
     def get_model(self, name):
         """
         Get model from file by name
@@ -58,104 +89,101 @@ class Process:
 
     def _get_evaluation(self, name, func, data_part):
         """
-        Creates evaluation statistics for all models
+        Creates evaluation statistics for a model
         :param name: (str) The name of the model
         :param func: (func) Function from Statistics.py to use evaluation (MAPE, MAE, RMSE, MSE, R-squared)
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
         :return: (dict) Evaluations for the models
         """
-        data = self.get_data(data_part)
         actual = self.get_target(data_part).flatten()
-        model = self.get_model(name)
-        forecast = model['results'].forecast(exog=data, steps=len(data))
+        forecast = self.get_forecasts(name, data_part)
 
         return func(actual, forecast)
 
-    def _get_model_evaluation(self, name, func):
-        """
-        Creates model evaluation statistics for all models
-        :param func: (func) Function from Statistics.py to use evaluation (AIC, AICc, BIC)
-        :return: (dict) Evaluations for the models
-        """
-        res = self.get_residuals(name)
-        model = self.get_model(name)
-        if model['interface'] == 'statsmodels':
-            k_params = model['model'].k_params
-
-        return func(res, k_params)
-
     def mape(self, name, data_part='train'):
         """
-        Returns Mean Absolute Percentage Error evaluation for all models
+        Returns Mean Absolute Percentage Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
-        :return: (dict) MAPE evaluation for all models
+        :return: (dict) MAPE evaluation for a model
         """
         return self._get_evaluation(name, self._EF.results_statistics.mape, data_part)
 
-    def mae(self, name, data_part='train'):
+    def wmape(self, name, data_part='train'):
         """
-        Returns Mean Absolute Error evaluation for all models
+        Returns weighted Mean Absolute Percentage Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
-        :return: (dict) MAE evaluation for all models
+        :return: (dict) wMAPE evaluation for a model
+        """
+        return self._get_evaluation(name, self._EF.results_statistics.wmape, data_part)
+
+    def mae(self, name, data_part='train'):
+        """
+        Returns Mean Absolute Error evaluation for a model
+        :param name: (str) The name of the model
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (dict) MAE evaluation for a model
         """
         return self._get_evaluation(name, self._EF.results_statistics.mae, data_part)
 
     def rmse(self, name, data_part='train'):
         """
-        Returns Root Mean Square Error evaluation for all models
+        Returns Root Mean Square Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
-        :return: (dict) RMSE evaluation for all models
+        :return: (dict) RMSE evaluation for a model
         """
         return self._get_evaluation(name, self._EF.results_statistics.rmse, data_part)
 
     def mse(self, name, data_part='train'):
         """
-        Returns Mean Square Error evaluation for all models
+        Returns Mean Square Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
-        :return: (dict) MSE evaluation for all models
+        :return: (dict) MSE evaluation for a model
         """
         return self._get_evaluation(name, self._EF.results_statistics.mse, data_part)
 
     def r2(self, name, data_part='train'):
         """
-        Returns R-Squared evaluation for all models
+        Returns R-Squared evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
-        :return: (dict) R-squared evaluation for all models
+        :return: (dict) R-squared evaluation for a model
         """
         return self._get_evaluation(name, self._EF.results_statistics.r2, data_part)
 
     def aic(self, name):
         """
-        Returns Akaike's Information Criterion for all models
+        Returns Akaike's Information Criterion for a model
         :param name: (str) The name of the model
-        :return: (dict) AIC evaluation for all models
+        :return: (float) AIC evaluation for a model
         """
-        return self._get_model_evaluation(name, self._EF.results_statistics.aic)
+        model = self.get_model(name)
+        return model.aic
 
     def aicc(self, name):
         """
-        Returns Akaike's Information Criterion corrected for all models
+        Returns Akaike's Information Criterion corrected for a model
         :param name: (str) The name of the model
-        :return: (dict) AICc evaluation for all models
+        :return: (float) AICc evaluation for a model
         """
-        return self._get_model_evaluation(name, self._EF.results_statistics.aicc)
+        model = self.get_model(name)
+        return model.aicc
 
     def bic(self, name):
         """
-        Returns Bayesian Information Criterion
+        Returns Bayesian Information Criterion for a model
         :param name: (str) The name of the model
-        :return: (dict) BIC evaluation for all models
+        :return: (float) BIC evaluation for a model
         """
-        return self._get_model_evaluation(name, self._EF.results_statistics.bic)
+        model = self.get_model(name)
+        return model.bic
 
     def box_pierce(self, name, lags=[10]):
         """
-        Box-Pierce portmanteau test
+        Box-Pierce portmanteau test for a model
         :param name: (str) The name of the model
         :param lags: (int or list(int)) Lags to return test values
         :return: (tuple(float)) Box-Pierce q-value and p-value
@@ -164,7 +192,7 @@ class Process:
 
     def ljung_box(self, name, lags=[10]):
         """
-        Ljung-Box portmanteau test
+        Ljung-Box portmanteau test for a model
         :param name: (str) The name of the model
         :param lags: (int or list(int)) Lags to return test values
         :return: (tuple(float)) Ljung-Box q-value and p-value
@@ -174,6 +202,7 @@ class Process:
     def get_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None):
         """
         Returns forecasts for a model
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the forecasts ('train', 'validation', 'test')
         :param start: (int) Starting point at data
@@ -184,12 +213,7 @@ class Process:
         data = self.get_data(data_part)
         if not steps:
             steps = len(data)
-        if model['interface'] == 'statsmodels' and 'results' in model:
-            forecast_results = model['results'].get_forecast(exog=data, steps=len(data))
-            forecast = forecast_results.predicted_mean[start: start + steps]
-            if alpha:
-                return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
-            return forecast
+        return model.get_forecasts(data, start, steps, alpha)
 
     def get_residuals(self, name):
         """
@@ -197,11 +221,8 @@ class Process:
         :param name: (str) name of the model
         :return: (numpy.ndarray) residuals of the model
         """
-        data = self.get_data()
-        target = self.get_target().flatten()
         model = self._EF.data_controller._get_model(name)
-        if model['interface'] == 'statsmodels' and 'results' in model:
-            return target - model['results'].forecast(exog=data, steps=len(data))
+        return model.get_residuals()
 
     def get_all_residuals(self):
         """
@@ -209,13 +230,9 @@ class Process:
         :return: (dict) The residuals of all the models
         """
         resids = {}
-        data = self.get_data()
-        target = self.get_target().flatten()
         for name in self.models:
-            model = self._EF.data_controller._get_model(name)
-            if model['interface'] == 'statsmodels' and 'results' in model:
-                resids.update({name: target - model['results'].forecast(exog=data, steps=len(data))})
-
+            resid = self.get_residuals(name)
+            resids.update({name: resid if not isinstance(resid, type(None)) else 'not fitted'})
         return resids
 
     def get_data(self, data_part='train'):
@@ -310,6 +327,21 @@ class Process:
         self._EF.results_visualizer.hist(resids, f'{name} residuals', bins=bins, density=density,
                                          plot_norm=plot_norm, axes=axes)
 
+    def get_intervals_from_residuals(self, resids, forecast, alpha):
+        """
+        Calculates confidense intervals from mean and standard deviation of the residuals
+        :param resids: (numpy.ndarray) residuals of the model
+        :param forecast: (numpy.ndarray) forecasts for the training data
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
+        :return: (list) list of tuples with down and up limit of the prediction confidence
+        """
+        mn = np.mean(resids)
+        std = np.std(resids)
+        from_ = norm.ppf(alpha, mn, std)
+        to_ = norm.ppf(1 - alpha, mn, std)
+        conf_int = [(i + from_, i + to_) for i in forecast]
+        return conf_int
+
     def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
                       intervals_from_residuals=True):
         """
@@ -318,30 +350,32 @@ class Process:
         :param data_part: (str) The part of target data to get('train', 'validation', 'test')
         :param start: (int) starting point for the plot
         :param steps: (int) steps to depict on the plot
-        :param alpha: (float) alpha for prediction intervals
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
         :param intervals_from_residuals: (bool) True to create prediction interval from residuals distribution
         :return: (pyplot.axes) axes of the plot
         """
-        alpha = min(alpha, 1 - alpha)
-        forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
-                                      alpha=None if intervals_from_residuals else alpha)
-        conf_int = []
-        if alpha:
-            if intervals_from_residuals:
-                from scipy.stats import norm
-                resids = self.get_residuals(name)
-                mn = np.mean(resids)
-                std = np.std(resids)
-                conf_int = [(i + norm.ppf(alpha, mn, std), i + norm.ppf(1 - alpha, mn, std)) for i in forecast]
-            else:
-                forecast, conf_int = forecast
+        not_alpha = isinstance(alpha, type(None))
+        if not not_alpha:
+            alpha = min(alpha, 1 - alpha)
+        if not_alpha or 0 < alpha <= .5:
+            forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
+                                          alpha=None if intervals_from_residuals else alpha)
+            conf_int = []
+            if alpha:
+                if intervals_from_residuals:
+                    resids = self.get_residuals(name)
+                    conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
+                else:
+                    forecast, conf_int = forecast
 
-        actual = self.get_target(data_part)[start: start + len(forecast)]
-        scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
-        self._EF.results_visualizer.plot_forecast(scale, actual, forecast, conf_int,
-                                                  name=f'{name}' + ('' if isinstance(alpha, type(None)) else
-                                                  f' - confidence {1 - alpha:1.0%}'), axes=axes)
+            actual = self.get_target(data_part)[start: start + len(forecast)]
+            scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
+            self._EF.results_visualizer.plot_forecast(scale, actual, forecast, conf_int,
+                                                      name=f'{name}' + ('' if isinstance(alpha, type(None)) else
+                                                      f' - confidence {1 - alpha:1.0%}'), axes=axes)
+        else:
+            raise ValueError('Alpha must be a float number between 0 and 1')
 
 
 class ProcessController:
@@ -353,7 +387,7 @@ class ProcessController:
         self._EF = ef
         self.process = None
 
-    def set_model(self, model, name, interface):
+    def set_model(self, model, name):
         """
         Insert model to the current process
         :param model: A well-defined model
@@ -361,7 +395,7 @@ class ProcessController:
         :param interface: (str) The interface to control the model training and the
         :return:
         """
-        self._EF.data_controller._set_model(name, model, interface)
+        self._EF.data_controller._set_model(name, model)
         self.process.models.append(name)
 
     def _process_creation_from_file(self, name, target, data, scale, timezone, lags, black_lags, target_length, train,
@@ -392,12 +426,12 @@ class ProcessController:
         """
         for name in self.process.models:
             model = self._EF.data_controller._get_model(name)
-            if 'results' not in model:
-                if model['interface'] == 'statsmodels':
-                    model.update({'results': model['model'].fit()})
-                    self._EF.data_controller._update_model(model)
+            if isinstance(model.results, type(None)):
+                model.fit(self.process.get_data(), self.process.get_target())
+                self._EF.data_controller._update_model(model)
 
-    def set_process(self, name, lags=0, black_lags=0, target_length=1, update_file=False, train=.6, validation=.2, test=.2):
+    def set_process(self, name: str, lags: int = 0, black_lags: int = 0, target_length: int = 1,
+                    update_file: bool = False, train: float = .6, validation: float = .2, test: float = .2):
         """
         Defines a new process
         :param name: (str) Name of the process
@@ -423,7 +457,7 @@ class ProcessController:
         """
         return self._EF.data_controller.get_process_names()
 
-    def get_process(self, name):
+    def get_process(self, name: str):
         """
         Get process with given name
         :param name: (str) Name of the process
@@ -471,9 +505,10 @@ class ProcessController:
         """
         return self._EF.data_controller.is_process_changed(self.process)
 
-    def insert_data(self, dataset, columns, change_to_new_tzone=True, no_lags=True):
+    def insert_data(self, dataset: str, columns: [str], change_to_new_tzone: bool = True, no_lags: bool = True):
         """
         Addind data to the process
+        :param no_lags: (bool) False to create data lags
         :param dataset: (str) Name of the dataset
         :param columns: (list(str)) Names of the columns to be added
         :param change_to_new_tzone: (bool) If True, it changes the timezone with respect of new data timezone
@@ -483,4 +518,72 @@ class ProcessController:
             self._EF.data_controller._import_data_to_process(dataset, columns, self.process,
                                                              change_to_new_tzone=change_to_new_tzone, no_lags=no_lags)
 
+    def data_summary(self, columns=None):
+        """
+        Returns a summary for the data
+        :param columns: (list(str)) list of the column names
+        :return: (str) printable summary of data
+        """
+        return self._EF.data_controller.data_summary(self.process, columns)
 
+    def run_process_script(self, filename):
+        """
+        Runs a script to automate data preprocessing
+        :param filename: (str) filename of the script
+        :return: (None)
+        """
+        dataset = ''
+        with open(filename, 'r') as f:
+            script = f.readlines()
+        for num, line in enumerate(script):
+            if line != '\n':
+                try:
+                    line = line.split(None, 1)
+                    command = line[0]
+                    try:
+                        params = dict([i.split('=') for i in line[1].strip().split(' ; ')])
+                    except IndexError:
+                        params = {}
+                    class_ = [i for i in CMDS for j in CMDS[i] if j == command][0]
+                    prefix = self._EF.data_controller.datasets[dataset] if class_ == 'preprocessor' else\
+                        self._EF.__getattribute__(class_)
+                except Exception as e:
+                    print(repr(e))
+                    raise SyntaxError(f"Wrong command '{command}', line {num + 1}")
+
+                for arg_name, value in params.items():
+                    try:
+                        annotation = prefix.__getattribute__(command).__annotations__[arg_name]
+                        if type(annotation) in (tuple, list, set):
+                            value = value.strip('[({})]').split(',')
+                            ln = len(annotation)
+                            if ln == 1:
+                                params[arg_name] = [annotation[0](i.strip()) for i in value]
+                            else:
+                                params[arg_name] = [annotation[i](value[i.strip()]) for i in range(ln)]
+                        else:
+                            params[arg_name] = annotation(value)
+                    except Exception as e:
+                        if value == 'None':
+                            params[arg_name] = None
+                        else:
+                            print(repr(e))
+                            raise ValueError(f'Wrong type of parameters ({arg_name}={value}), line {num + 1}')
+
+                try:
+                    prefix.__getattribute__(command)(**params)
+                except Exception as e:
+                    print(repr(e))
+                    raise Exception(f'Line {num + 1} raises an exception')
+
+                if command == 'get_dataset':
+                    dataset = params['name']
+
+
+
+# d = ef.process_controller.process.get_target('validation')
+# d = d.flatten()
+# f = ef.process_controller.process.get_forecasts('arima_000', 'validation', alpha=0.05)[0]
+# i = ef.process_controller.process.get_intervals_from_residuals(ef.process_controller.process.get_residuals('arima_000'), f, 0.05)
+# l_, h_ = np.array([*zip(*i)][0]), np.array([*zip(*i)][1])
+# print((sum(d > h_) + sum(d < l_)) / len(d))

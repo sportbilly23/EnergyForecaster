@@ -162,7 +162,7 @@ class Preprocessor:
 
         return (data - md) / q, (lambda x: (x - md) / q, lambda x: x * q + md)
 
-    def differenciate(self, data, period=1):
+    def differentiate(self, data, period=1):
         """
         Differentiate data
         :param data: (numpy.ndarray) Data to be transformed
@@ -243,6 +243,11 @@ class Preprocessor:
         return arr
 
     def _time_zone(self, time_zone):
+        """
+        Returns pytz.timezone from timezone-string
+        :param time_zone: (str) timezone string
+        :return: (pytz.timezone) corresponding pytz timezone
+        """
         return time_zone if time_zone.__class__.__module__ == 'pytz' else pytz.timezone(time_zone)
 
     def weekend(self, data, time_zone):
@@ -642,9 +647,3 @@ class Preprocessor:
             rev_data = trans['rev'](rev_data)
 
         return rev_data
-
-    # def fill_periodic(self, data, period=['Annually']):
-    #     nans = np.argwhere(np.isnan(data))
-    #     new_data = data.copy()
-    #     for i, j in nans:
-    #         pass

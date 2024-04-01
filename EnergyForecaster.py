@@ -3,7 +3,7 @@ from Preprocessor import Preprocessor
 from ProcessController import ProcessController
 from Statistics import StatsData, StatsResults
 from Visualizer import VisualizeData, VisualizeResults
-import logging
+from Models import *
 
 
 class EnergyForecaster:
@@ -35,14 +35,14 @@ if __name__ == '__main__':
     import time
     ef = EnergyForecaster('e:/test')
     # print(time.time())
-    # ef.data_contrller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
+    # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', h5_name='sb', skip=2)
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\consumption.csv', h5_name='sb2')
-    ef.data_controller.get_dataset('sb2')
+    # ef.data_controller.get_dataset('sb2')
     # ef.data_controller.get_dataset('weather')
-    ef.data_controller.get_dataset('sb')
-    sb = ef.data_controller.datasets['sb']
-    sb2 = ef.data_controller.datasets['sb2']
+    # ef.data_controller.get_dataset('sb')
+    # sb = ef.data_controller.datasets['sb']
+    # sb2 = ef.data_controller.datasets['sb2']
     # ef.data_controller.import_csv('C:\\Users\\sportbilly\\Downloads\\consumption.csv', h5_name='test')
     # sb.to_timestamp('time', '%Y-%m-%d %H:%M:%S', assign='inplace', tzone='utc')
     # sb.minmax(column='temperature', assign='inplace')
@@ -93,20 +93,21 @@ if __name__ == '__main__':
     # sb.lagged_series('weekday', name='weekday', lags=(0, 2, 3, 4, 5, 6, 7), assign='inplace')
     # sb.lagged_series('temperature', 'temp', lags=(1, 2), assign='add')
     # ef.process_controller.set_process('sb', lags=3, black_lags=2, target_length=24)
-    ef.process_controller.get_process('sb')
+    # ef.process_controller.get_process('process_2')
     # ef.process_controller.insert_data('sb', ['temperature', 'cloud_cover',
     #                                          'irradiance_surface', 'precipitation'], no_lags=False)
     # ef.process_controller.insert_data('sb', ['time_204588272', 'time_588562846', 'time_728017024', 'time_675637917'])
 
     # ef.process_controller.insert_data('sb2', ['ES_load_actual_entsoe_transparency'])
     # ef.process_controller.update_process()
-    # from statsmodels.tsa.statespace.sarimax import SARIMAX
+
     # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
     #                                         endog=ef.process_controller.process.get_target(), order=(1, 1, 1)),
     #                                 'arima_111', 'statsmodels')
     # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
     #                                         endog=ef.process_controller.process.get_target(), order=(0, 0, 0)),
-    #                                 'arima_000', 'statsmodels')
+    #                                 'arima_000_2', 'statsmodels')
+    # ef.process_controller.set_model(RandomForestRegressor(), 'random_forest', 'sklearn')
     # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
     #                                         endog=ef.process_controller.process.get_target(), order=(3, 1, 0)),
     #                                 'arima_310', 'statsmodels')
@@ -129,5 +130,30 @@ if __name__ == '__main__':
     # sb2.plot_seasonality('ES_load_actual_entsoe_transparency', period = 7 * 24, number_of_periods=4)
     # ef.process_controller.close_process()
     # ef.data_controller.import_csv('F:/My Drive/data/apartment-weather/apartment2014.csv')
+    # ef.process_controller.get_process('process_3')
+    # ef.process_controller.insert_data('sb', ['temperature', 'irradiance_surface', 'cloud_cover', 'precipitation'],
+    #                                   no_lags=False)
+    # print(sb.data_summary())
+    # ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
+    # ef.process_controller.fit_models()
+
+    # ef.process_controller.set_process('process_2', lags=3, black_lags=1)
+    ef.process_controller.get_process('process_2')
+    ef.data_controller.get_dataset('weather')
+    ef.data_controller.get_dataset('consumption')
+    # ef.process_controller.insert_data('weather', ['temperature', 'precipitation', 'irradiance_surface',
+    #                                               'cloud_cover'], no_lags=False)
+    # ef.process_controller.insert_data('weather', ['weekday_one_hot', 'month_one_hot', 'monthday_cos_sin',
+    #                                               'day_hour_one_hot'])
+    # ef.process_controller.insert_data('consumption', ['ES_load_actual_entsoe_transparency'])
+    # ef.process_controller.update_process()
+    # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
+    #                                         endog=ef.process_controller.process.get_target(), order=(0, 0, 0)),
+    #                                 'arima_000_2')
+    # ef.process_controller.set_model(RandomForestRegressor(), 'random_forest')
+    # ef.process_controller.update_process()
+    ef.process_controller.fit_models()
+    ef.process_controller.get_process('process_2')
+    print(ef.process_controller.process.mape('arima_000_2', 'validation'))
     print(time.time())
 

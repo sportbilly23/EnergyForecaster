@@ -26,7 +26,7 @@ limit_output				v	Μετατροπή εξόδου για περιορισμό τ
 minmax						v	Κανονικοποίηση Min-Max
 standard					v	Κανονικοποίηση Standard
 robust						v	Κανονικοποίηση Robust
-differenciate				v	Διαφοροποίηση κανονική/εποχική
+differentiate				v	Διαφοροποίηση κανονική/εποχική
 croston_method				v	Μέθοδος Croston για αραιές σειρές
 to_timestamp				v	Μετατροπή string σε timestamp
 weekend						v	One-hot μεταβλητή για καθημερινές/Σαββατοκύριακα

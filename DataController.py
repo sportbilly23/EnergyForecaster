@@ -5,7 +5,9 @@ from DictNoDupl import DictNoDupl
 import numpy as np
 import dill
 from DTable import DTable
-from utils import arrays_are_equal
+import utils
+from ProcessController import Process
+from Models import Model
 
 
 SIGNATURE = ['__SIGNATURE__', 'Energy Forecaster Framework']
@@ -26,8 +28,8 @@ class DataController:
         "Results".
         """
         self._EF = ef
-        self._INITIAL_ATTRIBUTES = {'scale': None, 'transformations': [], 'units': 'units', 'comments': '',
-                                    'target': False, 'lag': 0}
+        self._INITIAL_ATTRIBUTES = {'scale': None, 'transformations': [], 'units': 'units',
+                                    'comments': '', 'target': False}
 
         folderpath = os.path.abspath(folderpath)
 
@@ -155,7 +157,8 @@ class DataController:
         if filename in datasets:
             raise FileExistsError(f"Destination file ({filename}) already exists. Please define another name.")
 
-    def import_csv(self, filename: str, delimiter=',', quotes='', headline=True, encoding=None, skip=0, h5_name=None):
+    def import_csv(self, filename: str, delimiter: str = ',', quotes: str = '', headline: bool = True,
+                   encoding: str = None, skip: int = 0, h5_name: str = None):
         """
         open a csv file with delimiter, quotechar and type automations
         :param filename: (str) Path/Filename of csv file to import
@@ -212,9 +215,96 @@ class DataController:
             raise KeyError('No such dataset in the folder')
         return name
 
-    def get_dataset(self, name, in_line=False):
+    def data_summary(self, name, columns=None):
+        """
+        Returns a summary for a dataset
+        :param name: (str) name of the dataset
+        :param columns: (list(str)) list of the column names
+        :return: (str) printable summary of data
+        """
+        dataset = None
+        attributes = None
+        mode = None
+        if isinstance(name, str):
+            dataset = self.datasets[name]
+            attributes = self.datasets[name].attributes
+            mode = 'data'
+            if not columns:
+                columns = dataset.columns
+        elif isinstance(name, Process):
+            if not columns or columns[0] in name.data:
+                dataset = name.data
+            elif columns[0] in name.target:
+                dataset = name.target
+            attributes = name.attributes
+            mode = 'process'
+            if not columns:
+                columns = list(dataset.keys())
+
+        summary = dict(zip(columns, [[] for _ in range(len(columns))]))
+        for column in columns:
+            is_scale = ' (scale)' if 'is_scale' in attributes[column] and attributes[column]['is_scale'] else ''
+            is_target = ' (target)' if 'is_target' in attributes[column] and attributes[column]['is_target'] else ''
+            summary[column].append(f'name: {column}{is_scale}{is_target}\n'
+                                   f'{'-' * (6 + len(column) + len(is_scale) + len(is_target))}')
+            if 'lag' in attributes[column] and attributes[column]['lag']:
+                summary[column].append(f'lag: {attributes[column]["lag"]}')
+            if 'comments' in attributes[column] and attributes[column]['comments']:
+                summary[column].append(f'comments: {attributes[column]["comments"]}')
+            if 'timezone' in attributes[column] and attributes[column]['timezone']:
+                summary[column].append(f'timezone: {attributes[column]["timezone"]}')
+            units = dataset.get_units(column) if mode == 'data' else name.get_units(column) if mode == 'process' else None
+            summary[column].append(f'units: {units}')
+            scale = None
+            timezone = None
+            if mode == 'data' and 'scale' in dataset.attributes[column]:
+                try:
+                    timezone = attributes[attributes[column]['scale']]['timezone']
+                    scale = dataset[attributes[column]['scale']]
+                except KeyError:
+                    pass
+            elif mode == 'process':
+                scale = name.scale
+            if is_scale:
+                scale = dataset[column]
+                timezone = attributes[column]['timezone']
+            if not isinstance(scale, type(None)):
+                summary[column].append(f'from date: {utils.timestamp_to_date_str([scale[0]], timezone)[0]}')
+                summary[column].append(f'to date: {utils.timestamp_to_date_str([scale[-1]], timezone)[0]}')
+
+            if not dataset[column].dtype.names:
+                summary[column].append(f'length: {len(dataset[column])}')
+                if mode == 'data':
+                    rev_trans = dataset.reverse_trans(column)
+                elif mode == 'process':
+                    rev_trans = name.reverse_trans(column)
+                if dataset[column].dtype != np.dtype('O'):
+                    summary[column].append(f'min-max: {np.nanmin(rev_trans)} -> {np.nanmax(rev_trans)}')
+                    summary[column].append(f'mean: {np.nanmean(rev_trans):1.5f}')
+                    summary[column].append(f'std dev: {np.nanstd(rev_trans):1.5f}')
+                    summary[column].append(f'z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(rev_trans) > 3)) /
+                                                       len(dataset[column]):1.5f}')
+                    if 'transformations' in attributes[column] and attributes[column]['transformations']:
+                        summary[column].append(f'trans min-max: {np.nanmin(dataset[column])} -> {np.nanmax(dataset[column])}')
+                        summary[column].append(f'trans mean: {np.nanmean(dataset[column]):1.5f}')
+                        summary[column].append(f'trans std dev: {np.nanstd(dataset[column]):1.5f}')
+                        summary[column].append(f'trans z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(
+                            dataset[column]) > 3)) / len(dataset[column]):1.5f}')
+                    summary[column].append(f'nans: {np.nansum(np.isnan(dataset[column]))}')
+                    summary[column].append(f'zeros: {np.nansum(dataset[column] == 0)}')
+                else:
+                    summary[column].append(f'nans: {np.nansum(dataset[column] == '')}')
+                    summary[column].append(f'zeros: {np.nansum(dataset[column] == '0')}')
+            else:
+                summary[column].append(f'columns: {len(dataset[column].dtype.names)}')
+                summary[column].append(f'names: {', '.join(dataset[column].dtype.names)}')
+            # summary[column].append('')
+        return '\n\n'.join(['\n'.join(summary[i]) for i in summary])
+
+    def get_dataset(self, name: str, in_line: bool = False):
         """
         Loads an h5 file to the memory
+        :param in_line: (bool) True to return data or False to set data to datasets dictionary
         :param name: (str) Name of the file to get in memory
         :return: (None) Put numpy.ndarray in self.datasets dictionary
         """
@@ -246,7 +336,7 @@ class DataController:
                 attrs = self.datasets[name].attributes[col]
                 for attr in attrs:
                     if attr == 'transformations':
-                        if not arrays_are_equal(self._EF.preprocessor.reverse_trans(table[col],
+                        if not utils.arrays_are_equal(self._EF.preprocessor.reverse_trans(table[col],
                                                                                     attributes[col]['transformations']),
                                                 self.datasets[name].reverse_trans(col)):
                             return True
@@ -255,7 +345,7 @@ class DataController:
                             return True
             # Check arrays
             for col in table.dtype.names:
-                return not arrays_are_equal(self.datasets[name][col], table[col])
+                return not utils.arrays_are_equal(self.datasets[name][col], table[col])
         else:
             if not in_line:
                 self.datasets.update({name: DTable(table, name, attributes, self._EF)})
@@ -276,7 +366,7 @@ class DataController:
 
         self._set_dataset(self.datasets[name].data, new_name)
 
-    def update_dataset(self, name):
+    def update_dataset(self, name: str):
         """
         Updates file with changes have been done in memory
         :param name: (str) The name of the file
@@ -500,32 +590,31 @@ class DataController:
 
         return np.dtypes.ObjectDType
 
-    def _set_model(self, name, model, interface):
+    def _set_model(self, name, model):
         """
         Creates a new file to store details of a model
         :param name: (str) The name of the model
-        :param model: A well defined model
-        :param interface: (str) A string to define the interface to use for the manipulation of the model
+        :param model: A well-defined model
         :return: (None)
         """
         if name not in self.get_model_names():
             with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
-                dill.dump({'name': name, 'model': model, 'interface': interface}, f)
+                dill.dump(Model(name, model), f)
         else:
             raise FileExistsError('Model name already exists')
 
     def _update_model(self, model):
         """
         Updates a model's file
-        :param model: (dict) A dictionary with model's details
+        :param model: (Model) model instance
         :return: (None)
         """
-        name = model['name']
+        name = model.name
         if name in self.get_model_names():
             with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
                 dill.dump(model, f)
         else:
-            raise FileExistsError('Model name already exists')
+            raise FileNotFoundError('Model not found')
 
     def _get_model(self, name):
         """
@@ -647,6 +736,10 @@ class DataController:
         :param change_to_new_tzone: (bool) If True, it changes the timezone with respect of new data timezone
         :return: (None)
         """
+        def add_attributes(column, comments='', transformations=[], lag=0, units='units'):
+            process.attributes.update({column: {'comments': comments, 'lag': lag,
+                                                'transformations': transformations, 'units': units}})
+
         if dataset in self.datasets and self.is_dataset_changed(dataset):
             warnings.warn("Dataset has temporary changes that will not be taken into account. You must update the file.")
         dataset = self.get_dataset(dataset, in_line=True)
@@ -664,7 +757,7 @@ class DataController:
             if isinstance(process.scale, type(None)):
                 process.scale = dataset[col_scale]
             else:
-                if not arrays_are_equal(process.scale, dataset[col_scale]):
+                if not utils.arrays_are_equal(process.scale, dataset[col_scale]):
                     scale_format = np.in1d(process.scale, dataset[col_scale])
                     lst = list(process.data.keys())
                     for d in lst:
@@ -675,9 +768,16 @@ class DataController:
             if dataset.attributes[col]['target']:
                 if names:
                     for name in names:
-                        process.target.update({f'{col}::{name}': dataset[col][name]})
+                        nam = f'{col}::{name}'
+                        process.target.update({nam: dataset[col][name]})
+                        add_attributes(nam, comments=dataset.attributes[col]['comments'], lag=0,
+                                       transformations=dataset.attributes[col]['transformations'],
+                                       units=dataset.attributes[col]['units'])
                 else:
-                    process.target.update({f'{col}': dataset[col]})
+                    process.target.update({col: dataset[col]})
+                    add_attributes(col, comments=dataset.attributes[col]['comments'], lag=0,
+                                   transformations=dataset.attributes[col]['transformations'],
+                                   units=dataset.attributes[col]['units'])
             else:
 
                 lag_cols = dataset.lagged_series(col, col, process.lags) if not no_lags else \
@@ -685,14 +785,15 @@ class DataController:
                 for lag, lag_data in zip(process.lags if not no_lags else [0], lag_cols.dtype.names):
                     if names:
                         for name in names:
-                            column = f'{col}_lag-{lag}::{name}'
-                            process.data.update({column: lag_cols[lag_data]})  # dataset[col][name][cut - lag: -lag]})
-                            # process.attributes.update({column: dataset.attributes[col].copy()})
-                            # process.attributes[column]['lag'] = lag
-
+                            column = f'{col}_lag-{lag}::{name}' if not no_lags else f'{col}::{name}'
+                            process.data.update({column: lag_cols[lag_data]})
+                            add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
+                                           transformations=dataset.attributes[col]['transformations'],
+                                           units=dataset.attributes[col]['units'])
                     else:
                         column = f'{col}_lag-{lag}'
-                        process.data.update({column: lag_cols[lag_data]})  # dataset[col][cut - lag: -lag]})
-                        # process.attributes.update({column: dataset.attributes[col].copy()})
-                        # process.attributes[column]['lag'] = lag
+                        process.data.update({column: lag_cols[lag_data]})
+                        add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
+                                       transformations=dataset.attributes[col]['transformations'],
+                                       units=dataset.attributes[col]['units'])
 

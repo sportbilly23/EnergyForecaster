@@ -151,6 +151,15 @@ class StatsResults(Statistics):
         """
         return np.mean(np.abs(actual - forecast) / actual)
 
+    def wmape(self, actual, forecast):
+        """
+        Calculates Weighted Mean Absolute Percentage Error given actual and predicted values
+        :param actual: (np.ndarray) Actual values
+        :param forecast: (np.ndarray) Predicted values
+        :return: (float) MAPE score
+        """
+        return np.sum(np.abs(actual - forecast)) / np.sum(actual)
+
     def mae(self, actual, forecast):
         """
         Calculates Mean Absolute Error given actual and predicted values
@@ -201,33 +210,33 @@ class StatsResults(Statistics):
         ln = len(resids)
         var = np.std(resids, ddof=k_params) ** 2
         return - ln * np.log(2 * np.pi) / 2 - ln * np.log(var) / 2 - np.sum(np.square(resids)) / (2 * var)
-
-    def aic(self, resids, k_params):
-        """
-        Calculates Akaike's Information Criterion of residuals with respect of model's number of parameters
-        :param resids: (numpy.ndarray) Residuals of the fitted model
-        :param k_params: (int) Number of model's parameters
-        :return: (float) AIC score
-        """
-        return 2 * k_params - 2 * self._max_likelihood(resids, k_params)
-
-    def aicc(self, resids, k_params):
-        """
-        Calculates Akaike's Information Criterion corrected of residuals with respect of model's number of parameters
-        :param resids: (numpy.ndarray) Residuals of the fitted model
-        :param k_params: (int) Number of model's parameters
-        :return: (float) AICc score
-        """
-        return self.aic(resids, k_params) + (2 * k_params) * (k_params + 1) / (len(resids) - k_params - 1)
-
-    def bic(self, resids, k_params):
-        """
-        Calculates Bayesian Information Criterion of residuals with respect of model's number of parameters
-        :param resids: (numpy.ndarray) Residuals of the fitted model
-        :param k_params: (int) Number of model's parameters
-        :return: (float) BIC score
-        """
-        return self.aic(resids, k_params) + (np.log(len(resids) - 2)) * k_params
+    #
+    # def aic(self, resids, k_params):
+    #     """
+    #     Calculates Akaike's Information Criterion of residuals with respect of model's number of parameters
+    #     :param resids: (numpy.ndarray) Residuals of the fitted model
+    #     :param k_params: (int) Number of model's parameters
+    #     :return: (float) AIC score
+    #     """
+    #     return 2 * k_params - 2 * self._max_likelihood(resids, k_params)
+    #
+    # def aicc(self, resids, k_params):
+    #     """
+    #     Calculates Akaike's Information Criterion corrected of residuals with respect of model's number of parameters
+    #     :param resids: (numpy.ndarray) Residuals of the fitted model
+    #     :param k_params: (int) Number of model's parameters
+    #     :return: (float) AICc score
+    #     """
+    #     return self.aic(resids, k_params) + (2 * k_params) * (k_params + 1) / (len(resids) - k_params - 1)
+    #
+    # def bic(self, resids, k_params):
+    #     """
+    #     Calculates Bayesian Information Criterion of residuals with respect of model's number of parameters
+    #     :param resids: (numpy.ndarray) Residuals of the fitted model
+    #     :param k_params: (int) Number of model's parameters
+    #     :return: (float) BIC score
+    #     """
+    #     return self.aic(resids, k_params) + (np.log(len(resids) - 2)) * k_params
 
     def box_pierce(self, resids, lags=[10]):
         """
