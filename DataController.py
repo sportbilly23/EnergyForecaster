@@ -282,8 +282,7 @@ class DataController:
                     summary[column].append(f'min-max: {np.nanmin(rev_trans)} -> {np.nanmax(rev_trans)}')
                     summary[column].append(f'mean: {np.nanmean(rev_trans):1.5f}')
                     summary[column].append(f'std dev: {np.nanstd(rev_trans):1.5f}')
-                    summary[column].append(f'z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(rev_trans) > 3)) /
-                                                       len(dataset[column]):1.5f}')
+                    summary[column].append(f'z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(rev_trans) > 3)) / len(dataset[column]):1.5f}')
                     if 'transformations' in attributes[column] and attributes[column]['transformations']:
                         summary[column].append(f'trans min-max: {np.nanmin(dataset[column])} -> {np.nanmax(dataset[column])}')
                         summary[column].append(f'trans mean: {np.nanmean(dataset[column]):1.5f}')
