@@ -8,7 +8,6 @@ class Model:
         self.name = name
         self.model = model
         self.results = None
-        self.fitted = False
 
     def aic(self):
         """
