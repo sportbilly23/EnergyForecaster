@@ -288,8 +288,7 @@ class DataController:
                         summary[column].append(f'trans min-max: {np.nanmin(dataset[column])} -> {np.nanmax(dataset[column])}')
                         summary[column].append(f'trans mean: {np.nanmean(dataset[column]):1.5f}')
                         summary[column].append(f'trans std dev: {np.nanstd(dataset[column]):1.5f}')
-                        summary[column].append(f'trans z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(
-                            dataset[column]) > 3)) / len(dataset[column]):1.5f}')
+                        summary[column].append(f'trans z-score: {np.nansum(np.abs(self._EF.data_statistics.zscore(dataset[column]) > 3)) / len(dataset[column]):1.5f}')
                     summary[column].append(f'nans: {np.nansum(np.isnan(dataset[column]))}')
                     summary[column].append(f'zeros: {np.nansum(dataset[column] == 0)}')
                 else:

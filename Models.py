@@ -83,7 +83,7 @@ class Model:
         :return: (None)
         """
         if isinstance(self.model, SARIMAX):
-            self.results = self.model.fit()
+            self.results = self.model.fit(cov_type=None)
         elif isinstance(self.model, RandomForestRegressor):
             target = target.flatten()
             self.model.fit(data, target)
