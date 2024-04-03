@@ -294,8 +294,8 @@ class DataController:
                     summary[column].append(f'nans: {np.nansum(np.isnan(dataset[column]))}')
                     summary[column].append(f'zeros: {np.nansum(dataset[column] == 0)}')
                 else:
-                    summary[column].append(f'nans: {np.nansum(dataset[column] == '')}')
-                    summary[column].append(f'zeros: {np.nansum(dataset[column] == '0')}')
+                    summary[column].append(f'nans: {np.nansum(dataset[column] == "")}')
+                    summary[column].append(f'zeros: {np.nansum(dataset[column] == "0")}')
             else:
                 summary[column].append(f'columns: {len(dataset[column].dtype.names)}')
                 summary[column].append(f'names: {', '.join(dataset[column].dtype.names)}')
