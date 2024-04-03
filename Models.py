@@ -3,8 +3,8 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 class Model:
-    RandomForestRegressor_ = RandomForestRegressor
-    SARIMAX_ = SARIMAX
+    RandomForestRegressor = RandomForestRegressor
+    SARIMAX = SARIMAX
 
     def __init__(self, name, model):
         self.name = name
@@ -84,7 +84,7 @@ class Model:
         :return: (None)
         """
         if isinstance(self.model, SARIMAX):
-            self.results = self.model.fit(cov_type=None)
+            self.results = self.model.fit()
         elif isinstance(self.model, RandomForestRegressor):
             target = target.flatten()
             self.model.fit(data, target)
