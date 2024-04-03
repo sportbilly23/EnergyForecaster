@@ -246,7 +246,7 @@ class DataController:
             is_scale = ' (scale)' if 'is_scale' in attributes[column] and attributes[column]['is_scale'] else ''
             is_target = ' (target)' if 'is_target' in attributes[column] and attributes[column]['is_target'] else ''
             summary[column].append(f'name: {column}{is_scale}{is_target}\n'
-                                   f'{'-' * (6 + len(column) + len(is_scale) + len(is_target))}')
+                                   f'{"-" * (6 + len(column) + len(is_scale) + len(is_target))}')
             if 'lag' in attributes[column] and attributes[column]['lag']:
                 summary[column].append(f'lag: {attributes[column]["lag"]}')
             if 'comments' in attributes[column] and attributes[column]['comments']:
@@ -285,7 +285,8 @@ class DataController:
                     zscore1 = np.nansum(np.abs(self._EF.data_statistics.zscore(rev_trans) > 3)) / len(dataset[column])
                     summary[column].append(f'z-score: {zscore1: 1.5f}')
                     if 'transformations' in attributes[column] and attributes[column]['transformations']:
-                        summary[column].append(f'trans min-max: {np.nanmin(dataset[column])} -> {np.nanmax(dataset[column])}')
+                        summary[column].append(f'trans min-max: {np.nanmin(dataset[column])}'
+                                               f' -> {np.nanmax(dataset[column])}')
                         summary[column].append(f'trans mean: {np.nanmean(dataset[column]):1.5f}')
                         summary[column].append(f'trans std dev: {np.nanstd(dataset[column]):1.5f}')
                         zscore2 = np.nansum(np.abs(self._EF.data_statistics.zscore(dataset[column]) > 3)) / len(dataset[column])
