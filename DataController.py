@@ -298,7 +298,7 @@ class DataController:
                     summary[column].append(f'zeros: {np.nansum(dataset[column] == "0")}')
             else:
                 summary[column].append(f'columns: {len(dataset[column].dtype.names)}')
-                summary[column].append(f'names: {', '.join(dataset[column].dtype.names)}')
+                summary[column].append(f'names: {", ".join(dataset[column].dtype.names)}')
             # summary[column].append('')
         return '\n\n'.join(['\n'.join(summary[i]) for i in summary])
 
