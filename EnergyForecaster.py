@@ -22,6 +22,7 @@ class EnergyForecaster:
 
         :param filename: (str) The name of EF's directory/main file
         """
+        self.Model = Model
         self.preprocessor = Preprocessor(self)
         self.process_controller = ProcessController(self)
         self.data_statistics = StatsData(self)

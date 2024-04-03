@@ -3,6 +3,8 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 class Model:
+    RandomForestRegressor_ = RandomForestRegressor
+    SARIMAX_ = SARIMAX
 
     def __init__(self, name, model):
         self.name = name
