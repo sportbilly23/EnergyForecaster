@@ -34,7 +34,7 @@ class EnergyForecaster:
 
 if __name__ == '__main__':
     import time
-    ef = EnergyForecaster('e:/test')
+    ef = EnergyForecaster('e:/test_2')
     # print(time.time())
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', h5_name='sb', skip=2)
@@ -135,7 +135,8 @@ if __name__ == '__main__':
     # ef.process_controller.insert_data('sb', ['temperature', 'irradiance_surface', 'cloud_cover', 'precipitation'],
     #                                   no_lags=False)
     # print(sb.data_summary())
-    # ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
+    # ef.process_controller.remove_process('process_3')
+    ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
     # ef.process_controller.fit_models()
 
     ef.process_controller.set_process('process_2', lags=3, black_lags=1)

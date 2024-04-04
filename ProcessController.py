@@ -532,6 +532,9 @@ class ProcessController:
         :param filename: (str) filename of the script
         :return: (None)
         """
+        def cast_value(annotation, value):
+            return (True if value == 'True' else False) if annotation == bool else annotation(value)
+
         dataset = ''
         with open(filename, 'r') as f:
             script = f.readlines()
@@ -558,11 +561,11 @@ class ProcessController:
                             value = value.strip('[({})]').split(',')
                             ln = len(annotation)
                             if ln == 1:
-                                params[arg_name] = [annotation[0](i.strip()) for i in value]
+                                params[arg_name] = [cast_value(annotation[0], i.strip()) for i in value]
                             else:
-                                params[arg_name] = [annotation[i](value[i.strip()]) for i in range(ln)]
+                                params[arg_name] = [cast_value(annotation[i], value[i.strip()]) for i in range(ln)]
                         else:
-                            params[arg_name] = annotation(value)
+                            params[arg_name] = cast_value(annotation, value)
                     except Exception as e:
                         if value == 'None':
                             params[arg_name] = None
@@ -578,7 +581,6 @@ class ProcessController:
 
                 if command == 'get_dataset':
                     dataset = params['name']
-
 
 
 # d = ef.process_controller.process.get_target('validation')
