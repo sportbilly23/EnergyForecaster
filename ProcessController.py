@@ -16,17 +16,20 @@ CMDS = {'process_controller': ['set_process', 'get_process', 'update_process', '
 
 
 class Process:
-    def __init__(self, name, target=DictNoDupl(), data=DictNoDupl(), scale=None, timezone=pytz.utc,
-                 lags=1, black_lags=0, target_length=1, train=.6, validation=.2, test=.2, models=[], EF=None):
+    def __init__(self, name, target=DictNoDupl(), data=DictNoDupl(), scale=None, data_index={}, target_index={},
+                 timezone=pytz.utc, lags=1, black_lags=0, target_length=1, train=.6, validation=.2, test=.2, models=[],
+                 attributes=DictNoDupl(), EF=None):
         self.name = name
         self.data = data
         self.target = target
         self.scale = scale
+        self.data_index = data_index
+        self.target_index = target_index
         self.train = train
         self.validation = validation
         self.test = test
         self.models = models
-        self.attributes = DictNoDupl()
+        self.attributes = attributes
         self.target_length = target_length
         self.timezone = timezone
         self.lags = (black_lags * target_length,) + tuple((np.arange(1, lags) + black_lags) * target_length)
@@ -44,10 +47,13 @@ class Process:
                     assert utils.arrays_are_equal(self.target[t], other.target[t])
             if self.data or self.target:
                 assert utils.arrays_are_equal(self.scale, other.scale)
+            assert self.data_index == other.data_index
+            assert self.target_index == other.target_index
             assert self.train == other.train
             assert self.validation == other.validation
             assert self.test == other.test
             assert self.models == other.models
+            assert self.attributes == other.attributes
             assert self.target_length == other.target_length
             assert self.timezone == other.timezone
             assert self.lags == other.lags
@@ -241,7 +247,7 @@ class Process:
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
         :return: (numpy.ndarray) The defined part of the dataset
         """
-        data = self._prepare_data(self.data)
+        data = self._prepare_data(self.data, self.data_index)
         from_ = 0 if data_part == 'train' \
             else data.shape[0] * self.train if data_part == 'validation' \
             else data.shape[0] * (self.train + self.validation)
@@ -256,7 +262,7 @@ class Process:
         :param data_part: (str) The part of target data to get('train', 'validation', 'test')
         :return: (numpy.ndarray) The defined part of the target dataset
         """
-        data = self._prepare_data(self.target)
+        data = self._prepare_data(self.target, self.target_index)
         from_ = 0 if data_part == 'train' \
             else data.shape[0] * self.train if data_part == 'validation' \
             else data.shape[0] * (self.train + self.validation)
@@ -279,20 +285,20 @@ class Process:
             else self.scale.shape[0]
         return self.scale[int(from_):int(to_)]
 
-    def _prepare_data(self, data_dict):
+    def _prepare_data(self, data_dict, data_index):
         """
         Prepare data dictionary to feed a model
         :param data_dict: (DictNoDupl) Data in dictionary
         :return: (numpy.ndarray)
         """
         final_data = []
-        for i in list(data_dict.keys()):
-            names = data_dict[i].dtype.names
+        for i in range(len(data_dict)):
+            names = data_dict[data_index[i]].dtype.names
             if names:
                 for name in names:
-                    final_data.append(data_dict[i][name])
+                    final_data.append(data_dict[data_index[i]][name])
             else:
-                final_data.append(data_dict[i])
+                final_data.append(data_dict[data_index[i]])
         return np.vstack(final_data).T
 
     def plot_residuals(self, name, start=0, steps=None, axes=None):
@@ -369,11 +375,11 @@ class Process:
                 else:
                     forecast, conf_int = forecast
 
-            actual = self.get_target(data_part)[start: start + len(forecast)]
+            actual = self.get_target(data_part)[start: start + steps]
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
             self._EF.results_visualizer.plot_forecast(scale, actual, forecast, conf_int,
                                                       name=f'{name}' + ('' if isinstance(alpha, type(None)) else
-                                                      f' - confidence {1 - alpha:1.0%}'), axes=axes)
+                                                      f' - confidence {1 - alpha: 1.0%}'), axes=axes)
         else:
             raise ValueError('Alpha must be a float number between 0 and 1')
 
@@ -398,14 +404,16 @@ class ProcessController:
         self._EF.data_controller._set_model(name, model)
         self.process.models.append(name)
 
-    def _process_creation_from_file(self, name, target, data, scale, timezone, lags, black_lags, target_length, train,
-                                    validation, test, models):
+    def _process_creation_from_file(self, name, target, data, scale, data_index, target_index, timezone, lags,
+                                    black_lags, target_length, train, validation, test, models, attributes):
         """
         Create back a saved process
         :param name: (str) Name of the process
         :param target: (DictNoDupl) Target data
         :param data: (DictNoDupl) Data regressors
         :param scale: (numpy.ndarray) Scale of the data
+        :param data_index: (dict) Dictionary of data columns
+        :param target_index: (dict) Dictionary of target columns
         :param timezone: (pytz.timezone) Timezone of the scale
         :param lags: (tuple) Tuple of lags used in process
         :param black_lags: (tuple) Tuple of black-lags used in process
@@ -414,10 +422,11 @@ class ProcessController:
         :param validation: (float) Proportion for data validation
         :param test: (float) Proportion for test data
         :param models: (list(str)) List of files used as model definition-training-results storage
+        :param attributes: (dict) Dictionary of data and target attributes
         :return: (Process) The saved process
         """
-        return Process(name, target, data, scale, timezone, len(lags), len(black_lags),
-                       target_length, train, validation, test, models, self._EF)
+        return Process(name, target, data, scale, data_index, target_index, timezone, len(lags), len(black_lags),
+                       target_length, train, validation, test, models, attributes, self._EF)
 
     def fit_models(self):
         """

@@ -136,26 +136,29 @@ if __name__ == '__main__':
     #                                   no_lags=False)
     # print(sb.data_summary())
     # ef.process_controller.remove_process('process_3')
-    ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
+    # ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
     # ef.process_controller.fit_models()
 
-    ef.process_controller.set_process('process_2', lags=3, black_lags=1)
-    ef.process_controller.get_process('process_2')
-    ef.data_controller.get_dataset('weather')
-    ef.data_controller.get_dataset('consumption')
-    ef.process_controller.insert_data('weather', ['temperature', 'precipitation', 'irradiance_surface',
-                                                  'cloud_cover'], no_lags=False)
-    ef.process_controller.insert_data('weather', ['weekday_one_hot', 'month_one_hot', 'monthday_cos_sin',
-                                                  'day_hour_one_hot'])
-    ef.process_controller.insert_data('consumption', ['ES_load_actual_entsoe_transparency'])
-    ef.process_controller.update_process()
-    ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
-                                            endog=ef.process_controller.process.get_target(), order=(0, 0, 0)),
-                                    'arima_000_2')
+    # ef.process_controller.set_process('process_2', lags=3, black_lags=1)
+    # ef.process_controller.get_process('process_2')
+    # ef.data_controller.get_dataset('weather')
+    # ef.data_controller.get_dataset('consumption')
+    ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
+    # ef.process_controller.insert_data('weather', ['temperature', 'precipitation', 'irradiance_surface',
+    #                                               'cloud_cover'], no_lags=False)
+    # ef.process_controller.insert_data('weather', ['weekday_one_hot', 'month_one_hot', 'monthday_cos_sin',
+    #                                               'day_hour_one_hot'])
+    # ef.process_controller.insert_data('consumption', ['ES_load_actual_entsoe_transparency'])
+    # ef.process_controller.update_process()
+    # ef.process_controller.set_model(SARIMAX(exog=ef.process_controller.process.get_data(),
+    #                                         endog=ef.process_controller.process.get_target(), order=(0, 0, 0), seasonal_order=(0, 0, 0, 12)),
+    #                                 'arima_000_s000_12')
     ef.process_controller.set_model(RandomForestRegressor(), 'random_forest')
     ef.process_controller.update_process()
     ef.process_controller.fit_models()
-    print(ef.process_controller.process.mape('arima_000_2', 'validation'))
-    print(ef.process_controller.process.mape('random_forest', 'validation'))
+    # print(ef.process_controller.process.mape('arima_000_2', 'validation'))
+    # print(ef.process_controller.process.mape('random_forest', 'validation'))
+    ef.process_controller.process.plot_forecast('random_forest', 'validation', steps=240, alpha=0.05)
+
     print(time.time())
 

@@ -1,10 +1,12 @@
 from sklearn.ensemble import RandomForestRegressor
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from darts.models import TransformerModel
 
 
 class Model:
     RandomForestRegressor = RandomForestRegressor
     SARIMAX = SARIMAX
+    TransformerModel = TransformerModel
 
     def __init__(self, name, model):
         self.name = name
@@ -20,6 +22,8 @@ class Model:
             return self.model.aic
         if isinstance(self.model, RandomForestRegressor):
             return None
+        if isinstance(self.model, TransformerModel):
+            return None
 
     def aicc(self):
         """
@@ -30,6 +34,8 @@ class Model:
             return self.model.aicc
         if isinstance(self.model, RandomForestRegressor):
             return None
+        if isinstance(self.model, TransformerModel):
+            return None
 
     def bic(self):
         """
@@ -39,6 +45,8 @@ class Model:
         if isinstance(self.model, SARIMAX):
             return self.model.bic
         if isinstance(self.model, RandomForestRegressor):
+            return None
+        if isinstance(self.model, TransformerModel):
             return None
 
     def get_forecasts(self, data, start=0, steps=None, alpha=None):
@@ -63,6 +71,14 @@ class Model:
             # if alpha:
             #     return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
             return forecast
+        if isinstance(self.model, TransformerModel):
+            if isinstance(steps, type(None)):
+                steps = self.model.output_chunk_length
+            if start > self.model.output_chunk_length:
+                start = 0
+            if start + steps > self.model.output_chunk_length:
+                steps = self.model.output_chunk_length - start
+            return self.model.predict()[start: start + steps]
 
         raise NameError('Model type is not defined')
 

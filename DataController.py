@@ -104,17 +104,21 @@ class DataController:
         scale = None
         if 'scale' in f[name]:
             scale = f[name]['scale'][:]
-        target_length = self.get_attribute_object('target-length', f, name)
+        data_index = self.get_attribute_object('data-index', f, name)
+        target_index = self.get_attribute_object('target-index', f, name)
         train = self.get_attribute_object('train', f, name)
         validation = self.get_attribute_object('validation', f, name)
         test = self.get_attribute_object('test', f, name)
         models = self.get_attribute_object('models', f, name)
+        attributes = self.get_attribute_object('attributes', f, name)
+        target_length = self.get_attribute_object('target-length', f, name)
         timezone = self.get_attribute_object('timezone', f, name)
         lags = self.get_attribute_object('lags', f, name)
         black_lags = self.get_attribute_object('black-lags', f, name)
-        return self._EF.process_controller._process_creation_from_file(name, target, data, scale, timezone, lags,
-                                                                       black_lags, target_length, train, validation,
-                                                                       test, models)
+        return self._EF.process_controller._process_creation_from_file(name, target, data, scale, data_index,
+                                                                       target_index, timezone, lags, black_lags,
+                                                                       target_length, train, validation, test, models,
+                                                                       attributes)
 
     @ staticmethod
     def _check_quotes(quote, split):
@@ -697,11 +701,14 @@ class DataController:
             except AttributeError:
                 pass
 
-            self._set_attribute_object(process.target_length, 'target-length', f, name)
+            self._set_attribute_object(process.data_index, 'data-index', f, name)
+            self._set_attribute_object(process.target_index, 'target-index', f, name)
             self._set_attribute_object(process.train, 'train', f, name)
             self._set_attribute_object(process.validation, 'validation', f, name)
             self._set_attribute_object(process.test, 'test', f, name)
             self._set_attribute_object(process.models, 'models', f, name)
+            self._set_attribute_object(process.attributes, 'attributes', f, name)
+            self._set_attribute_object(process.target_length, 'target-length', f, name)
             self._set_attribute_object(process.timezone, 'timezone', f, name)
             self._set_attribute_object(process.lags, 'lags', f, name)
             self._set_attribute_object(process.black_lags, 'black-lags', f, name)
@@ -766,6 +773,9 @@ class DataController:
                         process.data[d] = temp[scale_format]
                     process.scale = process.scale[scale_format]
 
+            target_id = len(process.target_index)
+            data_id = len(process.data_index)
+
             if dataset.attributes[col]['target']:
                 if names:
                     for name in names:
@@ -774,11 +784,15 @@ class DataController:
                         add_attributes(nam, comments=dataset.attributes[col]['comments'], lag=0,
                                        transformations=dataset.attributes[col]['transformations'],
                                        units=dataset.attributes[col]['units'])
+                        process.target_index.update({target_id: nam})
+                        target_id += 1
                 else:
                     process.target.update({col: dataset[col]})
                     add_attributes(col, comments=dataset.attributes[col]['comments'], lag=0,
                                    transformations=dataset.attributes[col]['transformations'],
                                    units=dataset.attributes[col]['units'])
+                    process.target_index.update({target_id: col})
+                    target_id += 1
             else:
 
                 lag_cols = dataset.lagged_series(col, col, process.lags) if not no_lags else \
@@ -787,14 +801,18 @@ class DataController:
                     if names:
                         for name in names:
                             column = f'{col}_lag-{lag}::{name}' if not no_lags else f'{col}::{name}'
-                            process.data.update({column: lag_cols[lag_data]})
+                            process.data.update({column: lag_cols[lag_data][name]})
                             add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
                                            transformations=dataset.attributes[col]['transformations'],
                                            units=dataset.attributes[col]['units'])
+                            process.data_index.update({data_id: column})
+                            data_id += 1
                     else:
                         column = f'{col}_lag-{lag}'
                         process.data.update({column: lag_cols[lag_data]})
                         add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
                                        transformations=dataset.attributes[col]['transformations'],
                                        units=dataset.attributes[col]['units'])
+                        process.data_index.update({data_id: column})
+                        data_id += 1
 
