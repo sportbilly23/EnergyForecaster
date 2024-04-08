@@ -349,7 +349,7 @@ class Process:
         return conf_int
 
     def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
-                      intervals_from_residuals=True):
+                      intervals_from_residuals=False):
         """
         Gets forecasts of a model and supplies results_visualizer to create a plot
         :param name: (str) name of the model
@@ -367,11 +367,17 @@ class Process:
         if not_alpha or 0 < alpha <= .5:
             forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
                                           alpha=None if intervals_from_residuals else alpha)
+            if isinstance(forecast, tuple):
+                forecast, (start, steps) = forecast
+
             conf_int = []
             if alpha:
                 if intervals_from_residuals:
                     resids = self.get_residuals(name)
-                    conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
+                    if resids:
+                        conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
+                    else:
+                        alpha = None
                 else:
                     forecast, conf_int = forecast
 
@@ -436,7 +442,7 @@ class ProcessController:
         for name in self.process.models:
             model = self._EF.data_controller._get_model(name)
             if isinstance(model.results, type(None)):
-                model.fit(self.process.get_data(), self.process.get_target())
+                model.fit(self.process.get_data(), self.process.get_target(), self.process.get_scale())
                 self._EF.data_controller._update_model(model)
 
     def set_process(self, name: str, lags: int = 0, black_lags: int = 0, target_length: int = 1,

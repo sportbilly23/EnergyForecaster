@@ -38,7 +38,7 @@ class DataController:
 
         self.path = folderpath
         self.name = os.path.split(self.path)[-1]
-        self.processes = DictNoDupl(processes)
+        self.processes = processes
         self._EF.process_controller.datasets = self._EF.preprocessor.datasets = self.datasets = DictNoDupl()
         self.__check_changes = False
         self.__new_file = False
