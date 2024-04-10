@@ -107,7 +107,7 @@ class Process:
         if isinstance(forecast, tuple):
             forecast, _ = forecast
 
-        return func(actual, forecast)
+        return func(actual[:len(forecast)], forecast)
 
     def mape(self, name, data_part='train'):
         """
