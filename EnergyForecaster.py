@@ -168,9 +168,9 @@ if __name__ == '__main__':
     #                                         seasonal_order=(0, 0, 1, 24)),
     #                                 'arima_000_s001_24')
     # ef.process_controller.set_model(RandomForestRegressor(), 'random_forest')
-    ef.process_controller.set_model(TransformerModel(24, 24, n_epochs=30), 'transformer')
+    # ef.process_controller.set_model(TransformerModel(24, 24, n_epochs=30), 'transformer')
     # ef.process_controller.update_process()
-    ef.process_controller.fit_models()
+    # ef.process_controller.fit_models()
     # print(ef.process_controller.process.mape('arima_000_2', 'validation'))
     # print(ef.process_controller.process.mape('random_forest', 'validation'))
     # ef.process_controller.process.plot_forecast('transformer', 'validation')

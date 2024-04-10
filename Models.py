@@ -104,6 +104,19 @@ class Model:
         elif isinstance(self.model, TransformerModel):
             return None
 
+    def _darts_timeseries(self, data, scale):
+        """
+        Returns data as darts.Timeseries
+        :param data: (numpy.ndarray) input data
+        :param scale: scale of the data
+        :return: (darts.timeseries.TimeSeries) data as TimeSeries
+        """
+        scale = DatetimeIndex(scale * 1000000000)
+        series = DataArray(np.expand_dims(data, 2), dims=['scale', 'component', 'sample'],
+                           coords=dict(scale=scale),
+                           attrs=dict(static_covariates=None, hierarchy=None))
+        return TimeSeries(series)
+
     def fit(self, data, target=None, scale=None):
         """
         Trains the model
@@ -118,19 +131,9 @@ class Model:
             self.model.fit(data, target, **self.fit_params)
             self.results = {'resid': target - self.model.predict(data)}
         elif isinstance(self.model, TransformerModel):
-            data = np.expand_dims(data, 2)
-            target = np.expand_dims(target, 2)
-            scale = DatetimeIndex(scale * 1000000000)
+            series = self._darts_timeseries(target, scale)
 
-            series = DataArray(target, dims=['scale', 'component', 'sample'],
-                               coords=dict(scale=scale),
-                               attrs=dict(static_covariates=None, hierarchy=None))
-            series = TimeSeries(series)
-
-            past_cov = DataArray(data, dims=['scale', 'component', 'sample'],
-                                 coords=dict(scale=scale),
-                                 attrs=dict(static_covariates=None, hierarchy=None))
-            past_cov = TimeSeries(past_cov)
+            past_cov = self._darts_timeseries(data, scale)
 
             self.model.fit(series, past_cov)
             self.results = {}
@@ -146,6 +149,10 @@ class Model:
             self.model = TransformerModel
 
     def _open_darts_model(self):
+        """
+        Opens a darts model
+        :return: (darts model)
+        """
         temp_file = tempfile.mktemp()
         with open(temp_file, 'wb') as f:
             f.write(self.results['model'])
@@ -158,6 +165,10 @@ class Model:
         return trained_model
 
     def _temp_file_and_cpkt(self):
+        """
+        Generates a random unique name for a temporary file and a second with 'ckpt' extension
+        :return: (str) random unique name
+        """
         while True:
             temp_file = tempfile.mktemp()
             if not os.path.isfile(f'{temp_file}.ckpt'):

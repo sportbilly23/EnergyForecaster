@@ -348,6 +348,32 @@ class Process:
         conf_int = [(i + from_, i + to_) for i in forecast]
         return conf_int
 
+    def add_model(self, name):
+        """
+        Add an existed model to the process
+        :param name: (str) name of the model
+        :return: (None)
+        """
+        if name in self.models:
+            raise KeyError('Model is already registered in the process')
+        elif name not in self._EF.data_controller.get_model_names():
+            raise KeyError('Model name not exists')
+        else:
+            self.models.append(name)
+
+    def remove_model(self, name):
+        """
+        Remove a registered model from the process
+        :param name: (str) name of the model
+        :return: (None)
+        """
+        if name not in self.models:
+            raise KeyError('Model name not registered in the process')
+        else:
+            yn = input("Model will de removed from the process. Are you sure? (Type 'yes' to delete): ")
+            if yn.upper() == 'YES':
+                self.models.remove(name)
+
     def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
                       intervals_from_residuals=False):
         """
@@ -408,7 +434,6 @@ class ProcessController:
         :return:
         """
         self._EF.data_controller._set_model(name, model)
-        self.process.models.append(name)
 
     def _process_creation_from_file(self, name, target, data, scale, data_index, target_index, timezone, lags,
                                     black_lags, target_length, train, validation, test, models, attributes):
@@ -596,6 +621,7 @@ class ProcessController:
 
                 if command == 'get_dataset':
                     dataset = params['name']
+
 
 
 # d = ef.process_controller.process.get_target('validation')
