@@ -104,6 +104,9 @@ class Process:
         actual = self.get_target(data_part).flatten()
         forecast = self.get_forecasts(name, data_part)
 
+        if isinstance(forecast, tuple):
+            forecast, _ = forecast
+
         return func(actual, forecast)
 
     def mape(self, name, data_part='train'):
@@ -627,6 +630,8 @@ class ProcessController:
 # d = ef.process_controller.process.get_target('validation')
 # d = d.flatten()
 # f = ef.process_controller.process.get_forecasts('arima_000', 'validation', alpha=0.05)[0]
+# if isinstance(forecast, tuple):
+#     forecast, (start, steps) = forecast
 # i = ef.process_controller.process.get_intervals_from_residuals(ef.process_controller.process.get_residuals('arima_000'), f, 0.05)
 # l_, h_ = np.array([*zip(*i)][0]), np.array([*zip(*i)][1])
 # print((sum(d > h_) + sum(d < l_)) / len(d))
