@@ -71,7 +71,8 @@ class Model:
             forecast_results = self.results.get_forecast(exog=data, steps=len(data))
             forecast = forecast_results.predicted_mean[start: start + steps]
             if alpha:
-                return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
+                return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                        'conf_int': forecast_results.conf_int(alpha=alpha)[start: start + steps]}
             return forecast
         elif isinstance(self.model, RandomForestRegressor) and self.results:
             forecast_results = self.model.predict(data)
@@ -90,7 +91,8 @@ class Model:
                 steps = model.output_chunk_length - start
             preds = model.predict(model.output_chunk_length)
 
-            return preds[start: start + steps].all_values().flatten(), (start, steps)
+            return {'forecast': preds[start: start + steps].all_values().flatten(),
+                    'start': start, 'steps': steps, 'alpha': None, 'conf_int': []}
 
         raise NameError('Model type is not defined')
 

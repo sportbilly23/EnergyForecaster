@@ -105,8 +105,8 @@ class Process:
         actual = self.get_target(data_part).flatten()
         forecast = self.get_forecasts(name, data_part)
 
-        if isinstance(forecast, tuple):
-            forecast, _ = forecast
+        if isinstance(forecast, dict):
+            forecast = forecast['forecast']
 
         return func(actual[:len(forecast)], forecast)
 
@@ -402,24 +402,25 @@ class Process:
         :return: (pyplot.axes) axes of the plot
         """
         not_alpha = isinstance(alpha, type(None))
+        conf_int = []
         if not not_alpha:
             alpha = min(alpha, 1 - alpha)
         if not_alpha or 0 < alpha <= .5:
             forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
                                           alpha=None if intervals_from_residuals else alpha)
-            if isinstance(forecast, tuple):
-                forecast, (start, steps) = forecast
 
-            conf_int = []
-            if alpha:
-                if intervals_from_residuals:
-                    resids = self.get_residuals(name)
-                    if resids:
-                        conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
-                    else:
-                        alpha = None
+            if isinstance(forecast, dict):
+                conf_int = forecast['conf_int']
+                steps = forecast['steps']
+                start = forecast['start']
+                forecast = forecast['forecast']
+
+            if alpha and intervals_from_residuals:
+                resids = self.get_residuals(name)
+                if isinstance(resids, type(None)):
+                    alpha = None
                 else:
-                    forecast, conf_int = forecast
+                    conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
 
             actual = self.get_target(data_part)[start: start + steps]
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
@@ -482,9 +483,10 @@ class Process:
             model = self.get_model(m)
             forecasts = self._get_forecasts(model, data)
             steps = len(actuals)
-            if isinstance(forecasts, tuple):
-                forecasts, (_, steps) = forecasts
-                steps = len(forecasts)
+            if isinstance(forecasts, dict):
+                steps = forecasts['steps']
+                forecasts = forecasts['forecast']
+
             for eval in evals:
                 value = self._EF.results_statistics.__getattribute__(eval.lower())(actuals[:steps], forecasts)
                 strings = f'{value:f}'.split('.')
@@ -679,8 +681,11 @@ class ProcessController:
 # d = ef.process_controller.process.get_target('validation')
 # d = d.flatten()
 # f = ef.process_controller.process.get_forecasts('arima_000', 'validation', alpha=0.05)[0]
-# if isinstance(forecast, tuple):
-#     forecast, (start, steps) = forecast
+# if isinstance(forecast, dict):
+#     conf_int = forecast['conf_int']
+#     steps = forecast['steps']
+#     start = forecast['start']
+#     forecast = forecast['forecast']
 # i = ef.process_controller.process.get_intervals_from_residuals(ef.process_controller.process.get_residuals('arima_000'), f, 0.05)
 # l_, h_ = np.array([*zip(*i)][0]), np.array([*zip(*i)][1])
 # print((sum(d > h_) + sum(d < l_)) / len(d))
