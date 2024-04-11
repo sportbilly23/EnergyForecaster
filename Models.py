@@ -65,6 +65,8 @@ class Model:
         :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
         :return:
         """
+        if not steps:
+            steps = len(data)
         if isinstance(self.model, SARIMAX) and self.results:
             forecast_results = self.results.get_forecast(exog=data, steps=len(data))
             forecast = forecast_results.predicted_mean[start: start + steps]

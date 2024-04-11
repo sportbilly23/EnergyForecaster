@@ -220,8 +220,18 @@ class Process:
         """
         model = self.get_model(name)
         data = self.get_data(data_part)
-        if not steps:
-            steps = len(data)
+        return self._get_forecasts(model, data, start, steps, alpha)
+
+    def _get_forecasts(self, model, data, start=0, steps=None, alpha=None):
+        """
+        Returns forecasts for a model
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
+        :param model: (str) the model
+        :param data: (str) the data for the forecasts
+        :param start: (int) Starting point at data
+        :param steps: (int) Number of steps to forecast
+        :return: (numpy.ndarray) Forecasts of the model
+        """
         return model.get_forecasts(data, start, steps, alpha)
 
     def get_residuals(self, name):
@@ -418,6 +428,80 @@ class Process:
         else:
             raise ValueError('Alpha must be a float number between 0 and 1')
 
+    def data_summary(self, columns=None):
+        """
+        Returns a summary for the data
+        :param columns: (list(str)) list of the column names
+        :return: (str) printable summary of data
+        """
+        return self._EF.data_controller.data_summary(self, columns)
+
+    def fit_models(self):
+        """
+        Training all models
+        :return: (None)
+        """
+        for name in self.models:
+            model = self._EF.data_controller._get_model(name)
+            if isinstance(model.results, type(None)):
+                model.fit(self.get_data(), self.get_target(), self.get_scale())
+                self._EF.data_controller._update_model(model)
+
+    def is_changed(self):
+        """
+        Checks if current process has been changed
+        :return: (bool) True if current process have changes between RAM and file.
+        """
+        return self._EF.data_controller.is_process_changed(self)
+
+    def insert_data(self, dataset: str, columns: [str], change_to_new_tzone: bool = True, no_lags: bool = True):
+        """
+        Addind data to the process
+        :param no_lags: (bool) False to create data lags
+        :param dataset: (str) Name of the dataset
+        :param columns: (list(str)) Names of the columns to be added
+        :param change_to_new_tzone: (bool) If True, it changes the timezone with respect of new data timezone
+        :return: (None)
+        """
+        self._EF.data_controller._import_data_to_process(dataset, columns, self,
+                                                         change_to_new_tzone=change_to_new_tzone, no_lags=no_lags)
+
+    def evaluation_summary(self, data_part='train'):
+        """
+        Returns a summary of evaluations for all models of the process
+        :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :return: (str) summary of evaluations for all models
+        """
+        ln = max([len(m) for m in self.models])
+        evals = ['MAPE', 'wMAPE', 'MAE', 'RMSE', 'MSE', 'R2']
+        data = self.get_data(data_part)
+        evaluations = {e: {'left_digs': 1, 'values': {}} for e in evals}
+        actuals = self.get_target(data_part).flatten()
+        for m in self.models:
+            model = self.get_model(m)
+            forecasts = self._get_forecasts(model, data)
+            steps = len(actuals)
+            if isinstance(forecasts, tuple):
+                forecasts, (_, steps) = forecasts
+                steps = len(forecasts)
+            for eval in evals:
+                value = self._EF.results_statistics.__getattribute__(eval.lower())(actuals[:steps], forecasts)
+                strings = f'{value:f}'.split('.')
+                evaluations[eval]['left_digs'] = max(evaluations[eval]['left_digs'], len(strings[0].lstrip('0')))
+                # evaluations[eval]['right_digs'] = max(evaluations[eval]['right_digs'], len(strings[1].rstrip('0')))
+                evaluations[eval]['values'].update({m: value})
+
+        spaces = {e: max(7, evaluations[e]["left_digs"] + 3) for e in evals}
+        decims = {e: max(2, 6 - evaluations[e]["left_digs"]) for e in evals}
+        summary = [' | '.join([' ' * ln] + [f'{e}{" " * (spaces[e] - len(e))}' for e in evals])]
+        summary.append(''.join(['+' if i == '|' else '-' for i in summary[0]]))
+        for m in self.models:
+            summary.append(' | '.join(
+                [f'{m:<{ln}}'] + [f"{evaluations[e]['values'][m]:>{spaces[e]}.{decims[e]}f}"
+                                  for e in evals]))
+
+        return '\n'.join(summary)
+
 
 class ProcessController:
     """
@@ -428,15 +512,17 @@ class ProcessController:
         self._EF = ef
         self.process = None
 
-    def set_model(self, model, name):
+    def set_model(self, model, name, add_to_process=False):
         """
         Insert model to the current process
         :param model: A well-defined model
         :param name: (str) A name for the model
-        :param interface: (str) The interface to control the model training and the
-        :return:
+        :param add_to_process: (bool) True to register model in current process
+        :return: (None)
         """
         self._EF.data_controller._set_model(name, model)
+        if add_to_process:
+            self.process.add_model(name)
 
     def _process_creation_from_file(self, name, target, data, scale, data_index, target_index, timezone, lags,
                                     black_lags, target_length, train, validation, test, models, attributes):
@@ -461,17 +547,6 @@ class ProcessController:
         """
         return Process(name, target, data, scale, data_index, target_index, timezone, len(lags), len(black_lags),
                        target_length, train, validation, test, models, attributes, self._EF)
-
-    def fit_models(self):
-        """
-        Training all models
-        :return: (None)
-        """
-        for name in self.process.models:
-            model = self._EF.data_controller._get_model(name)
-            if isinstance(model.results, type(None)):
-                model.fit(self.process.get_data(), self.process.get_target(), self.process.get_scale())
-                self._EF.data_controller._update_model(model)
 
     def set_process(self, name: str, lags: int = 0, black_lags: int = 0, target_length: int = 1,
                     update_file: bool = False, train: float = .6, validation: float = .2, test: float = .2):
@@ -540,34 +615,6 @@ class ProcessController:
             if self.process and name == self.process.name:
                 self.process = None
             self._EF.data_controller.remove_process(name)
-
-    def is_process_changed(self):
-        """
-        Checks if current process has been changed
-        :return: (bool) True if current process have changes between RAM and file.
-        """
-        return self._EF.data_controller.is_process_changed(self.process)
-
-    def insert_data(self, dataset: str, columns: [str], change_to_new_tzone: bool = True, no_lags: bool = True):
-        """
-        Addind data to the process
-        :param no_lags: (bool) False to create data lags
-        :param dataset: (str) Name of the dataset
-        :param columns: (list(str)) Names of the columns to be added
-        :param change_to_new_tzone: (bool) If True, it changes the timezone with respect of new data timezone
-        :return: (None)
-        """
-        if self.process:
-            self._EF.data_controller._import_data_to_process(dataset, columns, self.process,
-                                                             change_to_new_tzone=change_to_new_tzone, no_lags=no_lags)
-
-    def data_summary(self, columns=None):
-        """
-        Returns a summary for the data
-        :param columns: (list(str)) list of the column names
-        :return: (str) printable summary of data
-        """
-        return self._EF.data_controller.data_summary(self.process, columns)
 
     def run_process_script(self, filename):
         """

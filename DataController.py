@@ -303,7 +303,6 @@ class DataController:
             else:
                 summary[column].append(f'columns: {len(dataset[column].dtype.names)}')
                 summary[column].append(f'names: {", ".join(dataset[column].dtype.names)}')
-            # summary[column].append('')
         return '\n\n'.join(['\n'.join(summary[i]) for i in summary])
 
     def get_dataset(self, name: str, in_line: bool = False):

@@ -174,6 +174,6 @@ if __name__ == '__main__':
     # print(ef.process_controller.process.mape('arima_000_2', 'validation'))
     # print(ef.process_controller.process.mape('random_forest', 'validation'))
     # ef.process_controller.process.plot_forecast('transformer', 'validation')
-
+    print(ef.process_controller.process.evaluation_summary('validation'))
     print(time.time())
 
