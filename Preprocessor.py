@@ -49,7 +49,6 @@ class Preprocessor:
     """
     def __init__(self, ef):
         self._EF = ef
-        self.datasets = None
 
     def log(self, base, data):
         """

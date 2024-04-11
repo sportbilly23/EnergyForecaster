@@ -347,7 +347,7 @@ class Process:
         self._EF.results_visualizer.hist(resids, f'{name} residuals', bins=bins, density=density,
                                          plot_norm=plot_norm, axes=axes)
 
-    def get_intervals_from_residuals(self, resids, forecast, alpha):
+    def _get_intervals_from_residuals(self, resids, forecast, alpha):
         """
         Calculates confidense intervals from mean and standard deviation of the residuals
         :param resids: (numpy.ndarray) residuals of the model
@@ -420,7 +420,7 @@ class Process:
                 if isinstance(resids, type(None)):
                     alpha = None
                 else:
-                    conf_int = self.get_intervals_from_residuals(resids, forecast, alpha)
+                    conf_int = self._get_intervals_from_residuals(resids, forecast, alpha)
 
             actual = self.get_target(data_part)[start: start + steps]
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
@@ -530,7 +530,7 @@ class ProcessController:
     def _process_creation_from_file(self, name, target, data, scale, data_index, target_index, timezone, lags,
                                     black_lags, target_length, train, validation, test, models, attributes):
         """
-        Create back a saved process
+        Creates instance of a saved process
         :param name: (str) Name of the process
         :param target: (DictNoDupl) Target data
         :param data: (DictNoDupl) Data regressors
@@ -686,6 +686,6 @@ class ProcessController:
 #     steps = forecast['steps']
 #     start = forecast['start']
 #     forecast = forecast['forecast']
-# i = ef.process_controller.process.get_intervals_from_residuals(ef.process_controller.process.get_residuals('arima_000'), f, 0.05)
+# i = ef.process_controller.process._get_intervals_from_residuals(ef.process_controller.process.get_residuals('arima_000'), f, 0.05)
 # l_, h_ = np.array([*zip(*i)][0]), np.array([*zip(*i)][1])
 # print((sum(d > h_) + sum(d < l_)) / len(d))

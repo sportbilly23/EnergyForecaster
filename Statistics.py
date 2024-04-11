@@ -200,16 +200,16 @@ class StatsResults(Statistics):
                                                                                      np.sum(forecast) ** 2) ** 0.5)))
                 ** 2)
 
-    def _max_likelihood(self, resids, k_params):
-        """
-        Calculates Maximum Likelihood of residuals with respect of model's number of parameters
-        :param resids: (numpy.ndarray) Residuals of the fitted model
-        :param k_params: (int) Number of model's parameters
-        :return: (float) Maximum Log Likelihood
-        """
-        ln = len(resids)
-        var = np.std(resids, ddof=k_params) ** 2
-        return - ln * np.log(2 * np.pi) / 2 - ln * np.log(var) / 2 - np.sum(np.square(resids)) / (2 * var)
+    # def _max_likelihood(self, resids, k_params):
+    #     """
+    #     Calculates Maximum Likelihood of residuals with respect of model's number of parameters
+    #     :param resids: (numpy.ndarray) Residuals of the fitted model
+    #     :param k_params: (int) Number of model's parameters
+    #     :return: (float) Maximum Log Likelihood
+    #     """
+    #     ln = len(resids)
+    #     var = np.std(resids, ddof=k_params) ** 2
+    #     return - ln * np.log(2 * np.pi) / 2 - ln * np.log(var) / 2 - np.sum(np.square(resids)) / (2 * var)
     #
     # def aic(self, resids, k_params):
     #     """
