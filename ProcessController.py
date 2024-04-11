@@ -6,7 +6,8 @@ from scipy.stats import norm
 from Models import *
 
 
-CMDS = {'process_controller': ['set_process', 'get_process', 'update_process', 'insert_data'],
+CMDS = {'process': ['insert_data'],
+        'process_controller': ['set_process', 'get_process', 'update_process'],
         'data_controller': ['import_csv', 'get_dataset', 'update_dataset'],
         'preprocessor': ['log', 'log2', 'log10', 'ln', 'exp', 'exp2', 'boxcox', 'limit_output', 'minmax', 'standard',
                          'robust', 'differentiate', 'croston_method', 'to_timestamp', 'weekend', 'weekday', 'monthday',
@@ -639,6 +640,7 @@ class ProcessController:
                         params = {}
                     class_ = [i for i in CMDS for j in CMDS[i] if j == command][0]
                     prefix = self._EF.data_controller.datasets[dataset] if class_ == 'preprocessor' else\
+                        self._EF.process_controller.process if class_ == 'process' else\
                         self._EF.__getattribute__(class_)
                 except Exception as e:
                     print(repr(e))
