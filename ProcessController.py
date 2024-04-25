@@ -1,6 +1,5 @@
 import utils
 from DictNoDupl import DictNoDupl
-import numpy as np
 import pytz
 from scipy.stats import norm
 from Models import *
@@ -430,6 +429,28 @@ class Process:
         else:
             raise ValueError('Alpha must be a float number between 0 and 1')
 
+    def plot_shapes(self, columns, data_part='train', axes=None):
+        """
+        Compares plot-shapes of different variables
+        :param columns: (list(str)) columns of the variables
+        :param data_part: (str) The part of target data to get('train', 'validation', 'test')
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        scale = utils.timestamp_to_date_str(self.get_scale(data_part), self.timezone)
+
+        datas = [self.get_target(data_part)[:, [i for i in self.target_index
+                                                if self.target_index[i] == column][0]] if column in self.target else
+                 self.get_data(data_part)[:, [i for i in self.data_index
+                                              if self.data_index[i] == column][0]] if column in self.data else
+                 None for column in columns]
+        check_nones = [isinstance(i, type(None)) for i in datas]
+        try:
+            error = check_nones.index(None)
+            raise KeyError(f'Column {check_nones[error]} not exists')
+        except ValueError:
+            return self._EF.data_visualizer.plot_shapes(scale, datas, columns, axes=axes)
+
     def data_summary(self, columns=None):
         """
         Returns a summary for the data
@@ -444,10 +465,29 @@ class Process:
         :return: (None)
         """
         for name in self.models:
-            model = self._EF.data_controller._get_model(name)
-            if isinstance(model.results, type(None)):
-                model.fit(self.get_data(), self.get_target(), self.get_scale())
-                self._EF.data_controller._update_model(model)
+            self.fit_model(name)
+
+    def fit_model(self, name):
+        """
+        Trains a model
+        :param name: (str) name of the model to train
+        :return: (None)
+        """
+        model = self._EF.data_controller._get_model(name)
+        if isinstance(model.results, type(None)):
+            model.fit(self.get_data(), self.get_target(), self.get_scale())
+            self._EF.data_controller._update_model(model)
+
+    def extend_fit(self, name, n_epochs=1):
+        """
+        Extra fit for a model
+        :param name: (str) name of the model
+        :param n_epochs: (int) number of epochs
+        :return: (None)
+        """
+        model = self._EF.data_controller._get_model(name)
+        model.extend_fit(self.get_data(), self.get_target(), n_epochs)
+        self._EF.data_controller._update_model(model)
 
     def is_changed(self):
         """
@@ -491,7 +531,6 @@ class Process:
                 value = self._EF.results_statistics.__getattribute__(eval.lower())(actuals[:steps], forecasts)
                 strings = f'{value:f}'.split('.')
                 evaluations[eval]['left_digs'] = max(evaluations[eval]['left_digs'], len(strings[0].lstrip('0')))
-                # evaluations[eval]['right_digs'] = max(evaluations[eval]['right_digs'], len(strings[1].rstrip('0')))
                 evaluations[eval]['values'].update({m: value})
 
         spaces = {e: max(7, evaluations[e]["left_digs"] + 3) for e in evals}

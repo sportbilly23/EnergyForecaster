@@ -175,6 +175,14 @@ if __name__ == '__main__':
     # print(ef.process_controller.process.mape('random_forest', 'validation'))
     # ef.process_controller.process.plot_forecast('transformer', 'validation')
     # print(ef.process_controller.process.evaluation_summary('validation'))
-    ef.process_controller.process.plot_forecast('arima_000', 'validation', steps=240, intervals_from_residuals=True, alpha=0.05)
+    # ef.process_controller.process.plot_forecast('arima_000', 'validation', steps=240, intervals_from_residuals=True, alpha=0.05)
+    # ef.process_controller.process.plot_forecast('random_forest', 'validation', steps=240,
+    #                                             intervals_from_residuals=False, alpha=0.05)
+    ef.data_controller.get_dataset('consumption')
+    # ef.data_controller.datasets['consumption'].plot_seasons('ES_load_actual_entsoe_transparency', period='daily',
+    #                                                         from_date=(2015, 3, 1), to_date=(2015, 3, 7), freq='hour')
+    # ef.process_controller.process.plot_shapes(['temperature_lag-1', 'ES_load_actual_entsoe_transparency'],
+    #                                           data_part='validation')
+    # ef.process_controller.process.extend_fit('mlp_100', 2000)
     print(time.time())
 

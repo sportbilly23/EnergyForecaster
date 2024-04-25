@@ -418,7 +418,7 @@ class DTable:
             new_name = f'{name}_{np.random.randint(int(1e8), int(1e9))}'
         return new_name
 
-    def _inplace(self, column, data, assign, rename, return_new_name=False):
+    def _inplace(self, column, data, assign, rename=None, return_new_name=False):
         """
         Controls column replacement and addition for new transformations
         :param column: (str) Label of the transformed column
@@ -757,6 +757,7 @@ class DTable:
         :param func: (func) Function to apply on data
         :return: (pyplot.axes) Axes of the plot
         """
+        to_date = utils.calculate_to_date(to_date)
         data, scale, units = self._plot_calculate_data_scale_units(column, from_date, to_date,
                                                                    reverse_transform, freq, func)
 
@@ -828,6 +829,7 @@ class DTable:
         :param func: (func) Function to apply on data
         :return: (pyplot.axes) Axes of the plot
         """
+        to_date = utils.calculate_to_date(to_date)
         legend = []
         valid_types = [('annual', 'hour'), ('annual', 'day'), ('annual', 'week'),
                        ('weekly', 'hour'), ('weekly', 'day'), ('daily', 'hour')]
@@ -862,7 +864,7 @@ class DTable:
             days = sorted(set([(s.year, s.month, s.day) for s in scale]))
             indx = np.zeros(scale.shape, dtype=[('year', np.int16), ('month', np.int16), ('day', np.int16)])
             for i in range(scale.shape[0]):
-                indx[i] = scale[i].day
+                indx[i] = (scale[i].year, scale[i].month, scale[i].day)
             days = np.array(list(days), dtype=indx.dtype)
             data_splits = [data[indx == day] for day in days]
             scale_splits = [scale[indx == day] for day in days]
@@ -889,6 +891,7 @@ class DTable:
         :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
         :return: (pyplot.axes) Axes of the plot
         """
+        to_date = utils.calculate_to_date(to_date)
         datas = []
         scale = None
         for column in columns:

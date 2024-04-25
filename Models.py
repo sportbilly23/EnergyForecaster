@@ -1,6 +1,11 @@
 import os
 import tempfile
 from sklearn.ensemble import RandomForestRegressor
+import torch
+from torch import nn
+from torch.utils.data import Dataset, DataLoader
+from torch import optim
+from sklearn.neural_network import MLPRegressor
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from darts.models import TransformerModel
 from darts.timeseries import TimeSeries
@@ -31,6 +36,8 @@ class Model:
             return None
         if isinstance(self.model, TransformerModel):
             return None
+        if isinstance(self.model, MLPRegressor):
+            return None
 
     def aicc(self):
         """
@@ -43,6 +50,8 @@ class Model:
             return None
         if isinstance(self.model, TransformerModel):
             return None
+        if isinstance(self.model, MLPRegressor):
+            return None
 
     def bic(self):
         """
@@ -54,6 +63,8 @@ class Model:
         if isinstance(self.model, RandomForestRegressor):
             return None
         if isinstance(self.model, TransformerModel):
+            return None
+        if isinstance(self.model, MLPRegressor):
             return None
 
     def get_forecasts(self, data, start=0, steps=None, alpha=None):
@@ -79,6 +90,7 @@ class Model:
             forecast = forecast_results[start: start + steps]
             # TODO: confidence intervals
             # if alpha:
+            #     err = np.sqrt(np.abs(fci.random_forest_error(self.model, train_data, data)))
             #     return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
             return forecast
         elif self.model == TransformerModel:
@@ -91,8 +103,13 @@ class Model:
                 steps = model.output_chunk_length - start
             preds = model.predict(model.output_chunk_length)
 
+            # TODO: confidence intervals
             return {'forecast': preds[start: start + steps].all_values().flatten(),
                     'start': start, 'steps': steps, 'alpha': None, 'conf_int': []}
+        elif isinstance(self.model, MLPRegressor):
+            forecast = self.model.predict(data)[start: start + steps]
+            # TODO: confidence intervals
+            return forecast
 
         raise NameError('Model type is not defined')
 
@@ -107,6 +124,8 @@ class Model:
             return self.results['resid']
         elif isinstance(self.model, TransformerModel):
             return None
+        elif isinstance(self.model, MLPRegressor):
+            return None
 
     def _darts_timeseries(self, data, scale):
         """
@@ -120,6 +139,19 @@ class Model:
                            coords=dict(scale=scale),
                            attrs=dict(static_covariates=None, hierarchy=None))
         return TimeSeries(series)
+
+    def extend_fit(self, data, target=None, n_epochs=1):
+        if self.results:
+            if isinstance(self.model, MLPRegressor):
+                target = target.flatten()
+                for _ in range(n_epochs):
+                    self.results['extra_fit'] += 1
+                    self.model.partial_fit(data, target, **self.fit_params)
+                self.results['resid'] = target - self.model.predict(data)
+            else:
+                raise ValueError('extend_fit not defined')
+        else:
+            raise ValueError('model is not fitted')
 
     def fit(self, data, target=None, scale=None):
         """
@@ -150,7 +182,12 @@ class Model:
                 self.results.update({'weights': f.read()})
             os.remove(temp_file)
             os.remove(f'{temp_file}.ckpt')
+            self.model.predict
             self.model = TransformerModel
+        elif isinstance(self.model, MLPRegressor):
+            target = target.flatten()
+            self.model.fit(data, target, **self.fit_params)
+            self.results = {'resid': target - self.model.predict(data), 'extra_fit': 0}
 
     def _open_darts_model(self):
         """

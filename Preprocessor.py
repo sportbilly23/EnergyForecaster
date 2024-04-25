@@ -567,11 +567,11 @@ class Preprocessor:
             ln = len(from_date)
             if ln < 3:
                 from_date = tuple(1 if i >= ln else from_date[i] for i in range(3))
-            from_date = datetime.datetime(*from_date, tzinfo=tz).timestamp()
-            to_date = datetime.datetime(*to_date, tzinfo=tz).timestamp()
+            from_date_ = tz.localize(datetime.datetime(*from_date)).timestamp()
+            to_date_ = tz.localize(datetime.datetime(*to_date)).timestamp()
             ln = len(scale)
-            scale_tf_1 = [s >= from_date for s in scale] if from_date else [True] * ln
-            scale_tf_2 = [s <= to_date for s in scale] if to_date else [True] * ln
+            scale_tf_1 = [s >= from_date_ for s in scale] if from_date_ else [True] * ln
+            scale_tf_2 = [s <= to_date_ for s in scale] if to_date_ else [True] * ln
         except TypeError:
             return [True] * len(scale)
         return [i & j for i, j in zip(scale_tf_1, scale_tf_2)]

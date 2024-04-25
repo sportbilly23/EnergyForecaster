@@ -217,6 +217,11 @@ class VisualizeData(Visualizer):
         :return: (pyplot.axes) Axes of the plot
         """
         legend = [] if not axes else [t._text for t in axes.get_legend().texts]
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Shapes Plot'))
+            axes = figure.subplots()
+        self._limit_xticks(scale, axes, grid=True)
         title = ' vs '.join(names)
         for data, name in zip(datas, names):
             data = self._EF.preprocessor.minmax(data)[0]

@@ -10,6 +10,13 @@ def calculate_to_date(to_date):
     :param to_date: (tuple(int)) the date
     :return: (tuple(int)) maximum computer date representation for the source date
     """
+    to_date = list(to_date)
+    for i in reversed(range(len(to_date))):
+        if to_date[i] == 0:
+            to_date.pop(i)
+        else:
+            break
+
     ln = len(to_date)
     if ln < 3:
         to_date = tuple(1 if i >= ln else to_date[i] + (1 if i == ln - 1 else 0) for i in range(3))
@@ -19,6 +26,7 @@ def calculate_to_date(to_date):
     else:
         to_date = datetime.datetime(*to_date) + datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5), seconds=(ln == 6),
                                                                    microseconds=(ln == 7))
+    to_date = to_date - datetime.timedelta(microseconds=1)
     return tuple(list(datetime.datetime.timetuple(to_date)[:-3]) + [to_date.microsecond])
 
 
