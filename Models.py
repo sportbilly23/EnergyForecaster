@@ -18,6 +18,12 @@ class Model:
     RandomForestRegressor = RandomForestRegressor
     SARIMAX = SARIMAX
     TransformerModel = TransformerModel
+    torch = torch
+    nn = nn
+    optim = optim
+    Dataset = Dataset
+    DataLoader = DataLoader
+    MLPRegressor = MLPRegressor
 
     def __init__(self, name, model, fit_params={}):
         self.name = name
