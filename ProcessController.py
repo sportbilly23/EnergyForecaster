@@ -536,7 +536,7 @@ class Process:
         spaces = {e: max(7, evaluations[e]["left_digs"] + 3) for e in evals}
         decims = {e: max(2, 6 - evaluations[e]["left_digs"]) for e in evals}
         summary = [' | '.join([' ' * ln] + [f'{e}{" " * (spaces[e] - len(e))}' for e in evals])]
-        summary.append(''.join(['+' if i == '|' else '-' for i in summary[0]]))
+        summary.append(''.join(['|' if i == '|' else '-' for i in summary[0]]))
         for m in self.models:
             summary.append(' | '.join(
                 [f'{m:<{ln}}'] + [f"{evaluations[e]['values'][m]:>{spaces[e]}.{decims[e]}f}"

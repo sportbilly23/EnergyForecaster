@@ -3,6 +3,20 @@ import numpy as np
 import pytz
 
 
+def timedelta_to_str(seconds):
+    """
+    Convert seconds to string of time counter
+    :param seconds: (int) seconds of a timer
+    :return: (str) string with days, hours, minutes and seconds
+    """
+    t_delta = datetime.timedelta(seconds=seconds)
+    days = t_delta.days
+    hours = int(t_delta.seconds / 3600)
+    mins = int((t_delta.seconds - hours * 60) / 60)
+    secs = int(t_delta.seconds % 60)
+    return f'{days}d {hours:02}:{mins:02}:{secs:02}'
+
+
 def calculate_to_date(to_date):
     """
     Giving a date in a tuple of integers, it returns the maximum computer date representation for this date
