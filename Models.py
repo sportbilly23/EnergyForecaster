@@ -1555,9 +1555,9 @@ class TorchModel:
         self.best_validation_state = None
 
         self.add_components(components)
-        self.__flatten_parameters_of_rnns()
+        self._flatten_parameters_of_rnns()
 
-    def __flatten_parameters_of_rnns(self):
+    def _flatten_parameters_of_rnns(self):
         """
         flatten parameters of rnn models, for memory compression and warnings avoidance
         :return: (None)
@@ -1566,7 +1566,7 @@ class TorchModel:
             if model.__class__ in [TorchInterface.comps['model'][m]['class'] for m in TorchInterface.recursive_models]:
                 model.flatten_parameters()
 
-    def __raise_parameter_value_error(self, class_, comp, param):
+    def _raise_parameter_value_error(self, class_, comp, param):
         """
         raise exception for parameter wrong values
         :param class_: (class) component's class
@@ -1591,17 +1591,17 @@ class TorchModel:
                 for i in range(len(value)):
                     try:
                         if not isinstance(list(value)[i], tag['class_container'][i]):
-                            self.__raise_parameter_value_error(tag['class'], comp, param)
+                            self._raise_parameter_value_error(tag['class'], comp, param)
                     except IndexError:
                         raise ValueError(
                             f'too many values to unpack in {comp} --{param} (expected {len(tag["class_container"])})')
                     except TypeError:
                         if not isinstance(list(value)[i], tag['class_container']):
-                            self.__raise_parameter_value_error(tag['class'], comp, param)
+                            self._raise_parameter_value_error(tag['class'], comp, param)
             elif 'class_members' in tag and value not in tag['class_container']:
-                self.__raise_parameter_value_error(tag['class'], comp, param)
+                self._raise_parameter_value_error(tag['class'], comp, param)
         else:
-            self.__raise_parameter_value_error(tag['class'], comp, param)
+            self._raise_parameter_value_error(tag['class'], comp, param)
         return True
 
     def _is_input_size(self, cat, comp, param):
@@ -1782,7 +1782,7 @@ class TorchModel:
                              f'(epoch {f"{self.best_validation_epoch + 1}" if not isinstance(self.best_validation_epoch, type(None)) else "-"})')
             return ', '.join(line_)
 
-        self.__flatten_parameters_of_rnns()
+        self._flatten_parameters_of_rnns()
         best_func = np.argmin if minimizing_func else np.argmax
         old_epochs = self.n_epochs_fitted
 
@@ -1872,7 +1872,7 @@ class TorchModel:
         :return: (torch.Tensor) tensor with predictions
         """
         with torch.no_grad():
-            self.__flatten_parameters_of_rnns()
+            self._flatten_parameters_of_rnns()
             return self.model(self._from_numpy(data))
 
 
@@ -1886,6 +1886,7 @@ class Model:
     TensorDataset = TensorDataset
     DataLoader = DataLoader
     MLPRegressor = MLPRegressor
+    TorchModel = TorchModel
 
     def __init__(self, name, model, fit_params={}):
         self.name = name

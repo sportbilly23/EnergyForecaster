@@ -711,7 +711,7 @@ class ProcessController:
         Removes a process from memory
         :return: (None)
         """
-        if self.is_process_changed():
+        if self.process and self.process.is_changed():
             yn = input("Process has been changed. Are you sure you want to close it? (Type 'yes' to close): ")
             if yn.upper() != 'YES':
                 return
