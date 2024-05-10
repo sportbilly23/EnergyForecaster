@@ -1,5 +1,8 @@
 import numpy as np
-from statsmodels.tsa.stattools import kpss, adfuller, acf, pacf
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss as sm_kpss
+from statsmodels.tsa.stattools import acf as sm_acf
+from statsmodels.tsa.stattools import pacf as sm_pacf
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import pearsonr, spearmanr
 
@@ -57,7 +60,7 @@ class Statistics:
         :param missing: (str) Specifying how the nans are treated ('none', 'raise', 'conservative', 'drop')
         :return: (list) Results from statsmodels module acf
         """
-        return acf(data, nlags=nlags, qstat=qstat, alpha=alpha, missing=missing)
+        return sm_acf(data, nlags=nlags, qstat=qstat, alpha=alpha, missing=missing)
 
     def pacf(self, data, nlags=None, method='yw', alpha=None):
         """
@@ -68,7 +71,7 @@ class Statistics:
         :param alpha: (float) For calculation of confident intervals
         :return: (list) Results from statsmodels module pacf
         """
-        return pacf(data, nlags=nlags, method=method, alpha=alpha)
+        return sm_pacf(data, nlags=nlags, method=method, alpha=alpha)
 
 
 class StatsData(Statistics):
@@ -80,7 +83,7 @@ class StatsData(Statistics):
         :param regression: (str) The null hypothesis for the KPSS test ('c', 'ct')
         :return: (list) KPSS test results from statsmodels module
         """
-        return kpss(x=data, regression=regression, nlags=nlags)
+        return sm_kpss(x=data, regression=regression, nlags=nlags)
 
     def adf(self, data, maxlag=None, regression='c', autolag='AIC'):
         """

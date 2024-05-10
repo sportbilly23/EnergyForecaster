@@ -428,19 +428,19 @@ class VisualizeData(Visualizer):
         figure = plt.figure(self._get_next_figure_name('Classical decomposition'))
         axes = figure.subplots(4, 1)
 
-        slice = lambda x: x[:period * number_of_periods] if number_of_periods else x
+        slice_ = lambda x: x[:period * number_of_periods] if number_of_periods else x
 
-        data_ = slice(data)
-        scale_ = slice(scale)
+        data_ = slice_(data)
+        scale_ = slice_(scale)
 
         self._limit_xticks(scale_, axes[0], number_of_ticks=10, rotation=5, text=True, grid=True)
         self.plot(scale_, data_, '', units, axes=axes[0])
         plt.suptitle(f'{name} - data / trend / seasonality / residuals - period {period}')
 
-        scale__ = slice(self._moving_average_data_offset(len(scale), period)(scale))
-        trend_ = slice(trend)
-        season_ = slice(season)
-        resids_ = slice(resids)
+        scale__ = slice_(self._moving_average_data_offset(len(scale), period)(scale))
+        trend_ = slice_(trend)
+        season_ = slice_(season)
+        resids_ = slice_(resids)
 
         self._limit_xticks(scale__, axes[1], number_of_ticks=10, rotation=5, text=True, grid=True)
         self.plot(scale__, trend_, '', units, axes=axes[1])
@@ -463,7 +463,7 @@ class VisualizeResults(Visualizer):
         :param intervals: (numpy.ndarray) Prediction intervals of the forecasts
         :param name: (str) name for the title
         :param units: (str) units of the variable
-        :param (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
         intervals = [*zip(*intervals)]
@@ -483,4 +483,3 @@ class VisualizeResults(Visualizer):
                                                                  0).astype(np.int64).tolist()], rotation=30)
 
         return axes
-

@@ -34,7 +34,7 @@ class EnergyForecaster:
 
 if __name__ == '__main__':
     import time
-    ef = EnergyForecaster('e:/test_2')
+    ef = EnergyForecaster('e:/test_3')
     # print(time.time())
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', h5_name='sb', skip=2)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     # ef.data_controller.get_dataset('weather')
     # ef.data_controller.get_dataset('consumption')
     # ef.process_controller.set_process('process_3', lags=3, black_lags=1)
-    ef.process_controller.get_process('process_3')
+    # ef.process_controller.get_process('process_3')
     # ef.data_controller.import_csv(f'C:\\Users\\sportbilly\\Downloads\\weather.csv', skip=2)
     # ef.data_controller.import_csv('C:\\Users\\sportbilly\\Downloads\\consumption.csv')
     # ef.process_controller.run_process_script('c:/users/sportbilly/Downloads/script')
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     # ef.process_controller.process.plot_forecast('arima_000', 'validation', steps=240, intervals_from_residuals=True, alpha=0.05)
     # ef.process_controller.process.plot_forecast('random_forest', 'validation', steps=240,
     #                                             intervals_from_residuals=False, alpha=0.05)
-    ef.data_controller.get_dataset('consumption')
+    # ef.data_controller.get_dataset('consumption')
     # ef.data_controller.datasets['consumption'].plot_seasons('ES_load_actual_entsoe_transparency', period='daily',
     #                                                         from_date=(2015, 3, 1), to_date=(2015, 3, 7), freq='hour')
     # ef.process_controller.process.plot_shapes(['temperature_lag-1', 'ES_load_actual_entsoe_transparency'],
@@ -238,16 +238,71 @@ if __name__ == '__main__':
     # m = nn.Linear(54, 1)
     # _train_torch_model(dl, m, optim.Adam(m.parameters()), nn.MSELoss(), 10)
 
-    model = TorchModel(54)
-    model.add_components(
-        [
-            'linear', {'out_features': 128},
-            'relu', {},
-            'linear', {'out_features': 1},
-            'adam', {},
-            'mse', {}
-        ]
-    )
+    # model = TorchModel(54, 'cuda')
+    # model.add_components(
+    #     [
+    #         'linear', {'out_features': 100},
+    #         'relu', {},
+    #         'linear', {'out_features': 1},
+    #         'adam', {'lr': 0.005},
+    #         'mse', {}
+    #     ]
+    # )
+    # ef.process_controller.set_model(model, 'linear_100r', fit_params={'batch_size': 64}, add_to_process=True)
+    # model.train(ef.process_controller.process.get_data(), ef.process_controller.process.get_target(), 300, 128,
+    #             validation_data=ef.process_controller.process.get_data('validation'),
+    #             validation_target=ef.process_controller.process.get_target('validation'),
+    #             func=ef.results_statistics.mape)
+    # del model
 
+    # ef.process_controller.process.plot_forecast('linear_100r', 'validation', alpha=.05, steps=300,
+    #                                             intervals_from_residuals=True)
+    # ef.process_controller.process.extend_fit('linear_100r', n_epochs=100)
+
+    # ef.process_controller.set_process('sb', 72, 24, 24)
+    ef.process_controller.get_process('sb')
+    # m = TorchModel(330, 'cuda', components=
+    # [
+    #     'gru', {'input_size': 330, 'hidden_size': 512, 'num_layers': 2, 'dropout': 0.1},
+    #     'linear', {'out_features': 1},
+    #     'adam', {'lr': 0.005},
+    #     'mse', {}
+    # ]
+    #                )
+    # m.train(ef.process_controller.process.get_data(), ef.process_controller.process.get_target(), 1000, 128,
+    #             validation_data=ef.process_controller.process.get_data('validation'),
+    #             validation_target=ef.process_controller.process.get_target('validation'),
+    #             func=ef.results_statistics.mape)
+    # ef.process_controller.set_model(
+    #     name='lstm',
+    #     fit_params={'batch_size': 16, 'func': ef.results_statistics.mape},
+    #     model=TorchModel(
+    #         input_size=330,
+    #         device='cuda',
+    #         components=[
+    #             'rnn', {'input_size': 330, 'hidden_size': 512, 'num_layers': 1},
+    #             'linear', {'out_features': 64},
+    #             'linear', {'out_features': 1},
+    #             'adam', {'lr': 0.005},
+    #             'mse', {}
+    #         ]
+    #     )
+    # )
+    # ef.process_controller.set_model(
+    #     name='transformer',
+    #     fit_params={'batch_size': 64, 'func': ef.results_statistics.mape},
+    #     model=TorchModel(
+    #         input_size=330,
+    #         device='cuda',
+    #         components=[
+    #             'transformer', {'d_model': 330, 'nhead': 10},
+    #             'linear', {'out_features': 64},
+    #             'linear', {'out_features': 1},
+    #             'adam', {'lr': 0.005},
+    #             'mse', {}
+    #         ]
+    #     )
+    # )
+    ef.process_controller.process.fit_model('transformer', n_epochs=300, use_torch_validation=True)
+    # ef.process_controller.process.fit_model('gru', n_epochs=300, use_torch_validation=True)
     print(time.time())
-

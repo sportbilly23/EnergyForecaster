@@ -1,4 +1,3 @@
-import utils
 from DictNoDupl import DictNoDupl
 import pytz
 from scipy.stats import norm
@@ -17,7 +16,7 @@ CMDS = {'process': ['insert_data'],
 
 class Process:
     def __init__(self, name, target=DictNoDupl(), data=DictNoDupl(), scale=None, data_index={}, target_index={},
-                 timezone=pytz.utc, lags=1, black_lags=0, target_length=1, train=.6, validation=.2, test=.2, models=[],
+                 timezone=pytz.utc, lags=1, black_lags=0, measure_period=1, train=.6, validation=.2, test=.2, models=[],
                  attributes=DictNoDupl(), EF=None):
         self.name = name
         self.data = data
@@ -30,10 +29,10 @@ class Process:
         self.test = test
         self.models = models
         self.attributes = attributes
-        self.target_length = target_length
+        self.measure_period = measure_period
         self.timezone = timezone
-        self.lags = (black_lags * target_length,) + tuple((np.arange(1, lags) + black_lags) * target_length)
-        self.black_lags = tuple(np.arange(black_lags) * target_length)
+        self.lags = lags
+        self.black_lags = black_lags
         self._EF = EF
 
     def __eq__(self, other):
@@ -54,7 +53,7 @@ class Process:
             assert self.test == other.test
             assert self.models == other.models
             assert self.attributes == other.attributes
-            assert self.target_length == other.target_length
+            assert self.measure_period == other.measure_period
             assert self.timezone == other.timezone
             assert self.lags == other.lags
             assert self.black_lags == other.black_lags
@@ -93,75 +92,106 @@ class Process:
         """
         return self._EF.data_controller._get_model(name)
 
-    def _get_evaluation(self, name, func, data_part):
+    def _get_evaluation(self, name, func, data_part, torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Creates evaluation statistics for a model
         :param name: (str) The name of the model
         :param func: (func) Function from Statistics.py to use evaluation (MAPE, MAE, RMSE, MSE, R-squared)
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) Evaluations for the models
         """
         actual = self.get_target(data_part).flatten()
-        forecast = self.get_forecasts(name, data_part)
+        forecast = self.get_forecasts(name, data_part, torch_best_valid=torch_best_valid,
+                                      torch_best_loss_if_no_valid=torch_best_loss_if_no_valid).flatten()
 
         if isinstance(forecast, dict):
             forecast = forecast['forecast']
 
         return func(actual[:len(forecast)], forecast)
 
-    def mape(self, name, data_part='train'):
+    def mape(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns Mean Absolute Percentage Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) MAPE evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.mape, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.mape, data_part,
+                                    torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def wmape(self, name, data_part='train'):
+    def wmape(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns weighted Mean Absolute Percentage Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) wMAPE evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.wmape, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.wmape, data_part,
+                                    torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def mae(self, name, data_part='train'):
+    def mae(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns Mean Absolute Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) MAE evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.mae, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.mae, data_part, torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def rmse(self, name, data_part='train'):
+    def rmse(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns Root Mean Square Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) RMSE evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.rmse, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.rmse, data_part,
+                                    torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def mse(self, name, data_part='train'):
+    def mse(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns Mean Square Error evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) MSE evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.mse, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.mse, data_part, torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def r2(self, name, data_part='train'):
+    def r2(self, name, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns R-Squared evaluation for a model
         :param name: (str) The name of the model
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) R-squared evaluation for a model
         """
-        return self._get_evaluation(name, self._EF.results_statistics.r2, data_part)
+        return self._get_evaluation(name, self._EF.results_statistics.r2, data_part, torch_best_valid=torch_best_valid,
+                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
     def aic(self, name):
         """
@@ -190,25 +220,35 @@ class Process:
         model = self.get_model(name)
         return model.bic
 
-    def box_pierce(self, name, lags=[10]):
+    def box_pierce(self, name, lags=[10], torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Box-Pierce portmanteau test for a model
         :param name: (str) The name of the model
         :param lags: (int or list(int)) Lags to return test values
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (tuple(float)) Box-Pierce q-value and p-value
         """
-        return self._EF.results_statistics.box_pierce(self.get_residuals(name), lags)
+        return self._EF.results_statistics.box_pierce(self.get_residuals(name, torch_best_valid,
+                                                                         torch_best_loss_if_no_valid), lags)
 
-    def ljung_box(self, name, lags=[10]):
+    def ljung_box(self, name, lags=[10], torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Ljung-Box portmanteau test for a model
         :param name: (str) The name of the model
         :param lags: (int or list(int)) Lags to return test values
+        :param lags: (int or list(int)) Lags to return test values
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (tuple(float)) Ljung-Box q-value and p-value
         """
-        return self._EF.results_statistics.ljung_box(self.get_residuals(name), lags)
+        return self._EF.results_statistics.ljung_box(self.get_residuals(name, torch_best_valid,
+                                                                         torch_best_loss_if_no_valid), lags)
 
-    def get_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None):
+    def get_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None, torch_best_valid=True,
+                      torch_best_loss_if_no_valid=True):
         """
         Returns forecasts for a model
         :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
@@ -216,13 +256,18 @@ class Process:
         :param data_part: (str) The part of data to use for the forecasts ('train', 'validation', 'test')
         :param start: (int) Starting point at data
         :param steps: (int) Number of steps to forecast
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (numpy.ndarray) Forecasts of the model
         """
         model = self.get_model(name)
         data = self.get_data(data_part)
-        return self._get_forecasts(model, data, start, steps, alpha)
+        return self._get_forecasts(model, data, start, steps, alpha, torch_best_valid=torch_best_valid,
+                                   torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def _get_forecasts(self, model, data, start=0, steps=None, alpha=None):
+    def _get_forecasts(self, model, data, start=0, steps=None, alpha=None, torch_best_valid=True,
+                       torch_best_loss_if_no_valid=True):
         """
         Returns forecasts for a model
         :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
@@ -230,27 +275,38 @@ class Process:
         :param data: (str) the data for the forecasts
         :param start: (int) Starting point at data
         :param steps: (int) Number of steps to forecast
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (numpy.ndarray) Forecasts of the model
         """
-        return model.get_forecasts(data, start, steps, alpha)
+        return model.get_forecasts(data, start, steps, alpha, torch_best_valid=torch_best_valid,
+                                   torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def get_residuals(self, name):
+    def get_residuals(self, name, torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns residuals of a model by name
         :param name: (str) name of the model
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (numpy.ndarray) residuals of the model
         """
         model = self._EF.data_controller._get_model(name)
-        return model.get_residuals()
+        return model.get_residuals(torch_best_valid=torch_best_valid,
+                                   torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
 
-    def get_all_residuals(self):
+    def get_all_residuals(self, torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns residuals of all models
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (dict) The residuals of all the models
         """
         resids = {}
         for name in self.models:
-            resid = self.get_residuals(name)
+            resid = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
             resids.update({name: resid if not isinstance(resid, type(None)) else 'not fitted'})
         return resids
 
@@ -314,16 +370,20 @@ class Process:
                 final_data.append(data_dict[data_index[i]])
         return np.vstack(final_data).T
 
-    def plot_residuals(self, name, start=0, steps=None, axes=None):
+    def plot_residuals(self, name, start=0, steps=None, axes=None, torch_best_valid=True,
+                       torch_best_loss_if_no_valid=True):
         """
         Gets residuals of a model and scale and supplies results_visualizer create a plot
         :param name: (str) name of the model
         :param start: (int) starting point for the plot
         :param steps: (int) steps to depict on the plot
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (pyplot.axes) axes of the plot
         """
-        resids = self.get_residuals(name)
+        resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
         ln = len(resids)
         scale = self.get_scale()[start: start + steps if steps else ln - start]
         scale_str = utils.timestamp_to_date_str(scale, self.timezone)
@@ -331,7 +391,8 @@ class Process:
                                                    resids[start: start + steps if steps else ln - start],
                                                    f'{name} residuals', axes=axes)
 
-    def hist_residuals(self, name, bins=10, density=False, plot_norm=False, axes=None):
+    def hist_residuals(self, name, bins=10, density=False, plot_norm=False, axes=None, torch_best_valid=True,
+                       torch_best_loss_if_no_valid=True):
         """
         Gets residuals of a model and supplies results_visualizer to create a histogram plot
         :param name: (str) name of the model
@@ -340,9 +401,12 @@ class Process:
         :param plot_norm: (bool) If True and also density is True, it draws a normal distribution with same mean and
                                  standard deviation as these of the data.
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (pyplot.axes) axes of the plot
         """
-        resids = self.get_residuals(name)
+        resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
         self._EF.results_visualizer.hist(resids, f'{name} residuals', bins=bins, density=density,
                                          plot_norm=plot_norm, axes=axes)
 
@@ -356,8 +420,8 @@ class Process:
         """
         mn = np.mean(resids)
         std = np.std(resids)
-        from_ = norm.ppf(alpha, mn, std)
-        to_ = norm.ppf(1 - alpha, mn, std)
+        from_ = norm.ppf(alpha / 2, mn, std)
+        to_ = norm.ppf(1 - alpha / 2, mn, std)
         conf_int = [(i + from_, i + to_) for i in forecast]
         return conf_int
 
@@ -414,18 +478,21 @@ class Process:
                 start = forecast['start']
                 forecast = forecast['forecast']
 
+            forecast = forecast.flatten()
+
             if alpha and intervals_from_residuals:
-                resids = self.get_residuals(name)
+                # resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
+                resids = self.get_target(data_part).flatten() - forecast
                 if isinstance(resids, type(None)):
                     alpha = None
                 else:
                     conf_int = self._get_intervals_from_residuals(resids, forecast, alpha)
 
-            actual = self.get_target(data_part)[start: start + steps]
+            actual = self.get_target(data_part)[start: (start + steps) if steps else steps].flatten()
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[start: start + len(forecast)], self.timezone)
             self._EF.results_visualizer.plot_forecast(scale, actual, forecast, conf_int,
                                                       name=f'{name}' + ('' if isinstance(alpha, type(None)) else
-                                                      f' - confidence {1 - alpha: 1.0%}'), axes=axes)
+                                                                        f' - confidence {1 - alpha: 1.0%}'), axes=axes)
         else:
             raise ValueError('Alpha must be a float number between 0 and 1')
 
@@ -467,26 +534,33 @@ class Process:
         for name in self.models:
             self.fit_model(name)
 
-    def fit_model(self, name):
+    def fit_model(self, name, n_epochs=1, use_torch_validation=False):
         """
         Trains a model
         :param name: (str) name of the model to train
+        :param n_epochs: (int) number of epochs to fit (if the model need it)
+        :param use_torch_validation: (bool) evaluates model with validation data while training (for TorchModel only)
         :return: (None)
         """
         model = self._EF.data_controller._get_model(name)
         if isinstance(model.results, type(None)):
-            model.fit(self.get_data(), self.get_target(), self.get_scale())
+            model.fit(self.get_data(), self.get_target(), scale=self.get_scale(), n_epochs=n_epochs,
+                         validation_data=self.get_data('validation') if use_torch_validation else None,
+                         validation_target=self.get_target('validation') if use_torch_validation else None)
             self._EF.data_controller._update_model(model)
 
-    def extend_fit(self, name, n_epochs=1):
+    def extend_fit(self, name, n_epochs=1, use_torch_validation=False):
         """
         Extra fit for a model
         :param name: (str) name of the model
         :param n_epochs: (int) number of epochs
+        :param use_torch_validation: (bool) evaluates model with validation data while training (for TorchModel only)
         :return: (None)
         """
         model = self._EF.data_controller._get_model(name)
-        model.extend_fit(self.get_data(), self.get_target(), n_epochs)
+        model.extend_fit(self.get_data(), self.get_target(), n_epochs,
+                         validation_data=self.get_data('validation') if use_torch_validation else None,
+                         validation_target=self.get_target('validation') if use_torch_validation else None)
         self._EF.data_controller._update_model(model)
 
     def is_changed(self):
@@ -508,10 +582,13 @@ class Process:
         self._EF.data_controller._import_data_to_process(dataset, columns, self,
                                                          change_to_new_tzone=change_to_new_tzone, no_lags=no_lags)
 
-    def evaluation_summary(self, data_part='train'):
+    def evaluation_summary(self, data_part='train', torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns a summary of evaluations for all models of the process
         :param data_part: (str) The part of data to use for the statistics ('train', 'validation', 'test')
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (str) summary of evaluations for all models
         """
         ln = max([len(m) for m in self.models])
@@ -521,11 +598,14 @@ class Process:
         actuals = self.get_target(data_part).flatten()
         for m in self.models:
             model = self.get_model(m)
-            forecasts = self._get_forecasts(model, data)
+            forecasts = self._get_forecasts(model, data, torch_best_valid=torch_best_valid,
+                                            torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
             steps = len(actuals)
             if isinstance(forecasts, dict):
                 steps = forecasts['steps']
                 forecasts = forecasts['forecast']
+
+            forecasts = forecasts.flatten()
 
             for eval in evals:
                 value = self._EF.results_statistics.__getattribute__(eval.lower())(actuals[:steps], forecasts)
@@ -554,20 +634,21 @@ class ProcessController:
         self._EF = ef
         self.process = None
 
-    def set_model(self, model, name, add_to_process=False):
+    def set_model(self, model, name, fit_params={}, add_to_process=False):
         """
         Insert model to the current process
         :param model: A well-defined model
         :param name: (str) A name for the model
+        :param fit_params: (dict) dictionary with training parameters
         :param add_to_process: (bool) True to register model in current process
         :return: (None)
         """
-        self._EF.data_controller._set_model(name, model)
+        self._EF.data_controller._set_model(name, model, fit_params)
         if add_to_process:
             self.process.add_model(name)
 
     def _process_creation_from_file(self, name, target, data, scale, data_index, target_index, timezone, lags,
-                                    black_lags, target_length, train, validation, test, models, attributes):
+                                    black_lags, measure_period, train, validation, test, models, attributes):
         """
         Creates instance of a saved process
         :param name: (str) Name of the process
@@ -579,7 +660,7 @@ class ProcessController:
         :param timezone: (pytz.timezone) Timezone of the scale
         :param lags: (tuple) Tuple of lags used in process
         :param black_lags: (tuple) Tuple of black-lags used in process
-        :param target_length: Length of target
+        :param measure_period: number of instances between two set of measurements
         :param train: (float) Proportion for training data
         :param validation: (float) Proportion for data validation
         :param test: (float) Proportion for test data
@@ -587,17 +668,17 @@ class ProcessController:
         :param attributes: (dict) Dictionary of data and target attributes
         :return: (Process) The saved process
         """
-        return Process(name, target, data, scale, data_index, target_index, timezone, len(lags), len(black_lags),
-                       target_length, train, validation, test, models, attributes, self._EF)
+        return Process(name, target, data, scale, data_index, target_index, timezone, lags, black_lags,
+                       measure_period, train, validation, test, models, attributes, self._EF)
 
-    def set_process(self, name: str, lags: int = 0, black_lags: int = 0, target_length: int = 1,
+    def set_process(self, name: str, lags: int = 0, black_lags: int = 0, measure_period: int = 1,
                     update_file: bool = False, train: float = .6, validation: float = .2, test: float = .2):
         """
         Defines a new process
         :param name: (str) Name of the process
         :param lags: (int) Number of historical data lags
         :param black_lags: (int) Number of black historical data lags
-        :param target_length: (int) Length of target
+        :param measure_period: (int) Number of instances between two set of measurements
         :param update_file: (bool) True to update file
         :param train: (float) Proportion for training data
         :param validation: (float) Proportion for data validation
@@ -606,7 +687,7 @@ class ProcessController:
         """
         amount = train + validation + test
         self._EF.data_controller.set_process(Process(name, lags=lags, black_lags=black_lags,
-                                                     target_length=target_length, train=train / amount,
+                                                     measure_period=measure_period, train=train / amount,
                                                      validation=validation / amount, test=test / amount,
                                                      EF=self._EF), update_file=update_file)
 

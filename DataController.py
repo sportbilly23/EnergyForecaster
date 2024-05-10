@@ -111,13 +111,13 @@ class DataController:
         test = self.get_attribute_object('test', f, name)
         models = self.get_attribute_object('models', f, name)
         attributes = self.get_attribute_object('attributes', f, name)
-        target_length = self.get_attribute_object('target-length', f, name)
+        measure_period = self.get_attribute_object('measure-period', f, name)
         timezone = self.get_attribute_object('timezone', f, name)
         lags = self.get_attribute_object('lags', f, name)
         black_lags = self.get_attribute_object('black-lags', f, name)
         return self._EF.process_controller._process_creation_from_file(name, target, data, scale, data_index,
                                                                        target_index, timezone, lags, black_lags,
-                                                                       target_length, train, validation, test, models,
+                                                                       measure_period, train, validation, test, models,
                                                                        attributes)
 
     @ staticmethod
@@ -594,7 +594,7 @@ class DataController:
 
         return np.dtypes.ObjectDType
 
-    def _set_model(self, name, model):
+    def _set_model(self, name, model, fit_params={}):
         """
         Creates a new file to store details of a model
         :param name: (str) The name of the model
@@ -603,7 +603,7 @@ class DataController:
         """
         if name not in self.get_model_names():
             with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
-                dill.dump(Model(name, model), f)
+                dill.dump(Model(name, model, fit_params), f)
         else:
             raise FileExistsError('Model name already exists')
 
@@ -707,7 +707,7 @@ class DataController:
             self._set_attribute_object(process.test, 'test', f, name)
             self._set_attribute_object(process.models, 'models', f, name)
             self._set_attribute_object(process.attributes, 'attributes', f, name)
-            self._set_attribute_object(process.target_length, 'target-length', f, name)
+            self._set_attribute_object(process.measure_period, 'measure-period', f, name)
             self._set_attribute_object(process.timezone, 'timezone', f, name)
             self._set_attribute_object(process.lags, 'lags', f, name)
             self._set_attribute_object(process.black_lags, 'black-lags', f, name)
@@ -764,6 +764,7 @@ class DataController:
             if isinstance(process.scale, type(None)):
                 process.scale = dataset[col_scale]
             else:
+                #TODO: Έλεγχο αν το time delta είναι όμοιο και αν έχουμε κενές εγγραφές
                 if not utils.arrays_are_equal(process.scale, dataset[col_scale]):
                     scale_format = np.in1d(process.scale, dataset[col_scale])
                     lst = list(process.data.keys())
@@ -793,10 +794,11 @@ class DataController:
                     process.target_index.update({target_id: col})
                     target_id += 1
             else:
+                lags = [i + process.black_lags + process.measure_period - 1 for i in range(process.lags)]
 
-                lag_cols = dataset.lagged_series(col, col, process.lags) if not no_lags else \
+                lag_cols = dataset.lagged_series(col, col, lags) if not no_lags else \
                     dataset.lagged_series(col, col, [0])
-                for lag, lag_data in zip(process.lags if not no_lags else [0], lag_cols.dtype.names):
+                for lag, lag_data in zip(lags if not no_lags else [0], lag_cols.dtype.names):
                     if names:
                         for name in names:
                             column = f'{col}_lag-{lag}::{name}' if not no_lags else f'{col}::{name}'
@@ -814,4 +816,3 @@ class DataController:
                                        units=dataset.attributes[col]['units'])
                         process.data_index.update({data_id: column})
                         data_id += 1
-

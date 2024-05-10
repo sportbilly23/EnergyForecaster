@@ -12,7 +12,7 @@ def timedelta_to_str(seconds):
     t_delta = datetime.timedelta(seconds=seconds)
     days = t_delta.days
     hours = int(t_delta.seconds / 3600)
-    mins = int((t_delta.seconds - hours * 60) / 60)
+    mins = int((t_delta.seconds - hours * 3600) / 60)
     secs = int(t_delta.seconds % 60)
     return f'{days}d {hours:02}:{mins:02}:{secs:02}'
 
@@ -38,8 +38,8 @@ def calculate_to_date(to_date):
             to_date = (to_date[0] + 1, 1, to_date[2])
         to_date = datetime.datetime(*to_date) - datetime.timedelta(microseconds=1)
     else:
-        to_date = datetime.datetime(*to_date) + datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5), seconds=(ln == 6),
-                                                                   microseconds=(ln == 7))
+        to_date = datetime.datetime(*to_date) + datetime.timedelta(days=(ln == 3), hours=(ln == 4), minutes=(ln == 5),
+                                                                   seconds=(ln == 6), microseconds=(ln == 7))
     to_date = to_date - datetime.timedelta(microseconds=1)
     return tuple(list(datetime.datetime.timetuple(to_date)[:-3]) + [to_date.microsecond])
 
@@ -76,7 +76,3 @@ def timestamp_to_date_str(dates, timezone):
     """
     return np.array([datetime.datetime.fromtimestamp(i, tz=timezone).strftime('%d/%m/%y %H:%M:%S') for i in dates])
 
-
-def find_timezones_by_offset(offset_seconds):
-    return [repr(get_tzinfo(i)) for i in list(pytz.all_timezones_set) if
-            get_tzinfo(i)._utcoffset.days * 86400 + get_tzinfo(i)._utcoffset.seconds == offset_seconds]
