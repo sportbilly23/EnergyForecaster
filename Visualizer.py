@@ -133,7 +133,7 @@ class Visualizer:
 
         return axes
 
-    def plot(self, scale, data, name='data', units='units', axes=None):
+    def plot(self, scale, data, name='data', units='units', xlab='time', axes=None):
         """
         Creates a plot to visualize variable into time
         :param scale: (numpy.ndarray) Scale data of the variable to plot
@@ -149,7 +149,7 @@ class Visualizer:
             axes = figure.subplots()
         axes.plot(scale, data)
         axes.set_title(f'{name}')
-        axes.set_xlabel('time')
+        axes.set_xlabel(xlab)
         axes.set_ylabel(units)
         return axes
 
@@ -456,7 +456,7 @@ class VisualizeResults(Visualizer):
 
     def plot_forecast(self, scale, actual, forecast, intervals=[], name='forecasts', units='units', axes=None):
         """
-
+        Plots forecasts and confidential intervals
         :param scale: (numpy.ndarray) Scale data of the variable to plot
         :param actual: (numpy.ndarray) Actual values of the variable to plot
         :param forecast: (numpy.ndarray) Forecasting values of the variable to plot
@@ -481,5 +481,68 @@ class VisualizeResults(Visualizer):
         axes.legend(labels=['actuals', 'forecasts'])
         plt.xticks(scale if len(scale) <= 20 else scale[np.round(np.linspace(0, len(scale) - 1, 20),
                                                                  0).astype(np.int64).tolist()], rotation=30)
+
+        return axes
+
+    def plot_loss_by_epoch(self, loss_history, name='training loss', units='loss', axes=None):
+        """
+        Plots training loss by epochs
+        :param loss_history: (list) history of training losses
+        :param name: (str) name for the title
+        :param units: (str) y-axes label units
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
+        self.plot(range(1, len(loss_history) + 1), loss_history, name=name, units=units, axes=axes)
+
+    def plot_validation_by_epoch(self, validation_history, name='validation loss', units='loss', axes=None):
+        """
+        Plots training validation loss by epochs
+        :param validation_history:
+        :param name: (str) name for the title
+        :param units: (str) y-axes label units
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
+        self.plot(range(1, len(validation_history) + 1), validation_history, name=name, units=units, axes=axes)
+
+    def plot_loss_by_time(self, epoch_times, loss_history, name='training loss', units='loss', axes=None):
+        """
+        Plots training loss by time
+        :param loss_history:
+        :param name: name for the title
+        :param units: (str) y-axes label units
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
+        self.plot(np.cumsum(epoch_times), loss_history, name=name, units=units, axes=axes)
+
+    def plot_validation_by_time(self, epoch_times, validation_history, name='validation loss', units='loss', axes=None):
+        """
+        Plots training validation loss by time
+        :param validation_history:
+        :param name: name for the title
+        :param units: (str) y-axes label units
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) axes of the plot
+        """
+        self.plot(np.cumsum(epoch_times), validation_history, name=name, units=units, axes=axes)
+
+    def compare_models_loss(self, losses, names, times=None, units='loss', axes=None):
+        """
+        Compares loss or validation of different models by epoch or by time
+        :param losses: (list(list)) loss or validation training values lists for different models
+        :param names: (list(str)) names for legend labels
+        :param units: (str) y-axes label units
+        :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
+        :return:  (pyplot.axes) axes of the plot
+        """
+        xlab = 'time'
+        if isinstance(times, type(None)):
+            xlab = 'epochs'
+            times = [range(1, len(loss) + 1) for loss in losses]
+        for loss, time in zip(losses, times):
+            axes = self.plot(time, loss, xlab=xlab, units=units, axes=axes)
+        axes.legend(labels=names)
 
         return axes

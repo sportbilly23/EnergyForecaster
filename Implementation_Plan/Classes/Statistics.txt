@@ -5,7 +5,6 @@ tests, υπολογισμούς συσχέτισης Pearson και Spearman κ�
 Χαρακτηριστικά Statistics
 -------------------------
 _EF                     To στιγμιότυπο του EnergyForcaster στο οποίο ανήκει
-datasets     (dict)     Το λεξικό με τα αρχεία τα οποία είναι ανοιχτά στον DC.
 
 
 Συναρτήσεις Statistics

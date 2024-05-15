@@ -7,7 +7,7 @@ import dill
 from DTable import DTable
 import utils
 from ProcessController import Process
-from Models import Model
+from Models import Model, VotingModel
 
 
 SIGNATURE = ['__SIGNATURE__', 'Energy Forecaster Framework']
@@ -606,6 +606,22 @@ class DataController:
                 dill.dump(Model(name, model, fit_params), f)
         else:
             raise FileExistsError('Model name already exists')
+
+    def _set_voting_model(self, name, model_names):
+        """
+        Creates a new file to store details of a voting model
+        :param name: (str) The name of the model
+        :param model_names: (list(str))) list of model names to create a voting model
+        :return: (None)
+        """
+        if name not in self.get_model_names():
+            for n in model_names:
+                if not os.path.isfile(os.path.join(self.path, 'models', n + '.pkl')):
+                    raise FileNotFoundError(f'model file {n}.pkl not exists')
+                with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
+                    dill.dump(VotingModel([os.path.join(self.path, 'models', n + '.pkl') for n in model_names]), f)
+        else:
+            raise FileExistsError('model name already exists')
 
     def _update_model(self, model):
         """

@@ -1,8 +1,10 @@
+import dill
 import os
 import sys
 import time
 import tempfile
 import warnings
+from scipy.stats import norm
 
 from sklearn.ensemble import RandomForestRegressor
 import torch
@@ -1529,6 +1531,34 @@ class SelectItem(nn.Module):
         return f'Select({self.item_index})'
 
 
+class VotingModel:
+    def __init__(self, filenames):
+        self.model_filenames = filenames
+        self._number_of_models = len(filenames)
+
+    def get_forecasts(self, data, start=0, steps=None, alpha=None, torch_best_valid=True,
+                       torch_best_loss_if_no_valid=True, intervals_from_validation=True):
+        forecasts = []
+        conf_int = []
+        if isinstance(steps, type(None)):
+            steps = data.shape[0]
+
+        for i in range(self._number_of_models):
+            with open(self.model_filenames[i], 'rb') as f:
+                model = dill.load(f)
+            forecast = model.get_forecasts(data, start, steps, alpha, torch_best_valid=torch_best_valid,
+                                          torch_best_loss_if_no_valid=torch_best_loss_if_no_valid,
+                                          intervals_from_validation=intervals_from_validation)
+            forecasts.append(forecast['forecast'].flatten())
+            conf_int.append(forecast['conf_int'])
+            start = max(start, forecast['start'])
+            steps = min(steps, forecast['steps'])
+            alpha = forecast['alpha']
+
+        return {'forecast': np.mean(np.vstack(forecasts), axis=0), 'start': start, 'steps': steps,
+                'alpha': alpha, 'conf_int': np.mean(np.vstack(conf_int), axis=0)}
+
+
 class TorchModel:
 
     def __init__(self, input_size, device, components):
@@ -1540,6 +1570,7 @@ class TorchModel:
         self.model = nn.Sequential().to(device)
         self.optimizer = None
         self.loss_func = None
+        self.validation_func = None
 
         self.n_epochs_fitted = 0
         self.loss_history = []
@@ -1790,6 +1821,12 @@ class TorchModel:
 
         dataloader = self._get_dataloader(data, target, batch_size, shuffle)
         if not isinstance(validation_data, type(None)):
+            if isinstance(self.validation_func, type(None)):
+                self.validation_func = func
+            else:
+                if self.validation_func.__class__ != func.__class__:
+                    func = self.validation_func
+                    warnings.warn(f'validation function is already set as {self.validation_func.__class__}')
             val_data = self._from_numpy(validation_data)
             with torch.no_grad():
                 validation = func(validation_target, self.model(val_data).squeeze(1).cpu().numpy())
@@ -1942,8 +1979,23 @@ class Model:
         elif isinstance(self.model, TorchModel):
             return None
 
-    def get_forecasts(self, data, start=0, steps=None, alpha=None, torch_best_valid=True,
-                      torch_best_loss_if_no_valid=True):
+    def _get_intervals(self, resids, forecast, alpha):
+        """
+        Calculates confidense intervals from mean and standard deviation of the residuals
+        :param resids: (numpy.ndarray) residuals of the model
+        :param forecast: (numpy.ndarray) forecasts for the training data
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
+        :return: (list) list of tuples with down and up limit of the prediction confidence
+        """
+        mn = np.mean(resids)
+        std = np.std(resids)
+        from_ = norm.ppf(alpha / 2, mn, std)
+        to_ = norm.ppf(1 - alpha / 2, mn, std)
+        conf_int = [(i + from_, i + to_) for i in forecast]
+        return conf_int
+
+    def get_forecasts(self, data, start=0, steps=None, alpha=None, intervals_from_validation=True,
+                      torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Returns forecasts
         :param data: (numpy.ndarray) new data for making forecasts
@@ -1957,21 +2009,28 @@ class Model:
         """
         if not steps:
             steps = len(data)
+
+        if alpha:
+            resids = self.get_validation_residuals() if intervals_from_validation else \
+                self.get_residuals(torch_best_valid=torch_best_valid,
+                                   torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
+
         if isinstance(self.model, SARIMAX) and self.results:
             forecast_results = self.results.get_forecast(exog=data, steps=len(data))
             forecast = forecast_results.predicted_mean[start: start + steps]
-            if alpha:
-                return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
-                        'conf_int': forecast_results.conf_int(alpha=alpha)[start: start + steps]}
-            return forecast
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+
+            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                    'conf_int': intervals}
+
         elif isinstance(self.model, RandomForestRegressor) and self.results:
             forecast_results = self.model.predict(data)
             forecast = forecast_results[start: start + steps]
-            # TODO: confidence intervals
-            # if alpha:
-            #     err = np.sqrt(np.abs(fci.random_forest_error(self.model, train_data, data)))
-            #     return forecast, forecast_results.conf_int(alpha=alpha)[start: start + steps]
-            return forecast
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+
+            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                    'conf_int': intervals}
+
         elif self.model == TransformerModel:
             model = self._open_darts_model()
             if isinstance(steps, type(None)):
@@ -1981,14 +2040,20 @@ class Model:
             if start + steps > model.output_chunk_length:
                 steps = model.output_chunk_length - start
             preds = model.predict(model.output_chunk_length)
+            forecast = preds[start: start + steps].all_values().flatten()
 
-            # TODO: confidence intervals
-            return {'forecast': preds[start: start + steps].all_values().flatten(),
-                    'start': start, 'steps': steps, 'alpha': None, 'conf_int': []}
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+
+            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                    'conf_int': intervals}
+
         elif isinstance(self.model, MLPRegressor):
             forecast = self.model.predict(data)[start: start + steps]
-            # TODO: confidence intervals
-            return forecast
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+
+            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                    'conf_int': intervals}
+
         elif isinstance(self.model, TorchModel):
             if torch_best_valid:
                 try:
@@ -2002,8 +2067,10 @@ class Model:
                 self.model.model.load_state_dict(self.model.best_loss_state)
 
             forecast = self.model.predict(data)[start: start + steps].squeeze(1).cpu().numpy()
-            #TODO: confidence intervals
-            return forecast
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+
+            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
+                    'conf_int': intervals}
 
         raise NameError('Model type is not defined')
 
@@ -2027,6 +2094,27 @@ class Model:
             return self.results['resid']['best_valid'] if 'valid' in self.results['resid'] and torch_best_valid else \
                 self.results['resid']['best_loss'] if torch_best_loss_if_no_valid else None
 
+    def get_validation_residuals(self, data=None, target=None):
+        """
+        Returns validation residuals of the model
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
+        :return: (numpy.ndarray) residuals of the model
+        """
+        if 'valid_resid' not in self.results:
+            if isinstance(data, type(None)) or isinstance(target, type(None)):
+                raise ValueError(
+                    'no validation residuals founded, you need to run function with validation dataset and target')
+            else:
+                self.results.update(
+                    {'valid_resid':
+                         target.flatten() - self.get_forecasts(data)['forecast'].flatten()
+                     }
+                )
+
+        return self.results['valid_resid']
+
     def _darts_timeseries(self, data, scale):
         """
         Returns data as darts.Timeseries
@@ -2048,11 +2136,13 @@ class Model:
                     self.results['extra_fit'] += 1
                     self.model.partial_fit(data, target, **self.fit_params)
                 self.results['resid'] = target - self.model.predict(data)
+
             elif isinstance(self.model, TorchModel):
                 self.fit(data, target, n_epochs=n_epochs, validation_data=validation_data,
                          validation_target=validation_target)
             else:
                 raise ValueError('extend_fit not defined')
+
         else:
             raise ValueError('model is not fitted')
 
@@ -2069,10 +2159,12 @@ class Model:
         """
         if isinstance(self.model, SARIMAX):
             self.results = self.model.fit(**self.fit_params)
+
         elif isinstance(self.model, RandomForestRegressor):
             target = target.flatten()
             self.model.fit(data, target, **self.fit_params)
             self.results = {'resid': target - self.model.predict(data)}
+
         elif isinstance(self.model, TransformerModel):
             series = self._darts_timeseries(target, scale)
 
@@ -2090,20 +2182,23 @@ class Model:
             os.remove(temp_file)
             os.remove(f'{temp_file}.ckpt')
             self.model = TransformerModel
+
         elif isinstance(self.model, MLPRegressor):
             target = target.flatten()
             self.model.fit(data, target, **self.fit_params)
             self.results = {'resid': target - self.model.predict(data), 'extra_fit': 0}
+
         elif isinstance(self.model, TorchModel):
             self.model.train(data, target, n_epochs, validation_data=validation_data,
                              validation_target=validation_target, **self.fit_params)
-            state_dict = self.clone_weights()
-            self.model.model.load_state(self.best_loss_state)
-            self.results = {'resid': {'best_loss': target - self.get_forecasts(data)}}
-            if not isinstance(self.best_validation_state, type(None)):
-                self.model.model.load_state(self.best_validation_state)
-                self.results['resid'].update({'best_valid': target - self.get_forecasts(data)})
-            self.model.model.load_state(state_dict)
+            state_dict = self.model.clone_weights()
+            self.model.model.load_state_dict(self.model.best_loss_state)
+            self.results = {'resid': {'best_loss': target - self.get_forecasts(data)['forecast']}}
+            if not isinstance(self.model.best_validation_state, type(None)):
+                self.model.model.load_state_dict(self.model.best_validation_state)
+                self.results['resid'].update(
+                    {'best_valid': validation_target - self.get_forecasts(validation_data)['forecast']})
+            self.model.model.load_state_dict(state_dict)
 
     def _open_darts_model(self):
         """

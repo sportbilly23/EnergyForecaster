@@ -185,59 +185,6 @@ if __name__ == '__main__':
     #                                           data_part='validation')
     # ef.process_controller.process.extend_fit('mlp_100', 2000)
 
-
-    # def _train_torch_model(dataloader, model, optimizer, loss, n_epochs, print_progress=True, time_interval=0.1):
-    #     """
-    #     Trains torch models
-    #     :param dataloader: (torch.DataLoader) dataset/target-data iterator
-    #     :param model: (torch.nn.Module) torch neural network model
-    #     :param optimizer: (torch.optim.Optimizer) optimizer to use for training
-    #     :param loss: (torch.Loss)
-    #     :param n_epochs: (int) number of epochs for training
-    #     :return: (None)
-    #     """
-    #     loss_history = []
-    #     best_loss = torch.inf
-    #     best_epoch = 0
-    #     epoch_times = []
-    #     line = ''
-    #
-    #     ln = len(dataloader)
-    #     epoch_len = len(str(n_epochs))
-    #
-    #     start_time = time.time()
-    #     cycle_time = start_time
-    #
-    #     for epoch in range(1, n_epochs + 1):
-    #         for x, y in dataloader:
-    #             optimizer.zero_grad()
-    #             loss_value = loss(model(x), y)
-    #             loss_value.backward()
-    #             optimizer.step()
-    #             loss_history.append(loss_value)
-    #             if loss_value < best_epoch:
-    #                 best_loss = loss_value
-    #                 best_epoch = epoch
-    #             prev_line = len(line)
-    #
-    #             if print_progress:
-    #                 now = time.time()
-    #                 if now - cycle_time >= time_interval:
-    #                     line = (f'Epoch: {epoch:>{epoch_len}} ({epoch / ln:5.2%}), loss: {loss_value},'
-    #                             f' best: {best_loss} (epoch {best_epoch})')
-    #                     print(line, end=f"{' ' * (len(line) - prev_line)}\r")
-    #                     sys.stdin.flush()
-    #
-    #         epoch_times.append(time.time() - start_time)
-    #
-    #
-    # X = ef.process_controller.process.get_data()
-    # Y = ef.process_controller.process.get_target()
-    # dt = EFDataLoader(X, Y)
-    # dl = DataLoader(dt, batch_size=8, shuffle=False)
-    # m = nn.Linear(54, 1)
-    # _train_torch_model(dl, m, optim.Adam(m.parameters()), nn.MSELoss(), 10)
-
     # model = TorchModel(54, 'cuda')
     # model.add_components(
     #     [
@@ -303,6 +250,26 @@ if __name__ == '__main__':
     #         ]
     #     )
     # )
-    ef.process_controller.process.fit_model('transformer', n_epochs=300, use_torch_validation=True)
+    # ef.process_controller.set_model(
+    #     name='linear',
+    #     fit_params={'batch_size': 64, 'func': ef.results_statistics.mape},
+    #     model=TorchModel(
+    #         input_size=330,
+    #         device='cuda',
+    #         components=[
+    #             'linear', {'out_features': 1024},
+    #             'mish', {},
+    #             'linear', {'out_features': 1024},
+    #             'relu', {},
+    #             'linear', {'out_features': 1},
+    #             'adam', {'lr': 0.005},
+    #             'l1', {}
+    #         ]
+    #     )
+    # )
+    # ef.process_controller.process.fit_model('linear', n_epochs=300, use_torch_validation=True)
+    # ef.process_controller.process.plot_forecast('gru', alpha=.05, intervals_from_validation=False)
     # ef.process_controller.process.fit_model('gru', n_epochs=300, use_torch_validation=True)
+    # ef.process_controller.set_voting_model('vote_1', ['linear', 'random_forest'], True)
+    print(ef.process_controller.process.evaluation_summary(['vote_1'], 'validation'))
     print(time.time())

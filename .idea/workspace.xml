@@ -4,12 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="pytorch models">
+    <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="documentation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Models.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Models.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Statistics.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Statistics.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Models.py" beforeDir="false" afterPath="$PROJECT_DIR$/Models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ProcessController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ProcessController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Visualizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Visualizer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,35 +120,29 @@
       <option name="project" value="LOCAL" />
       <updated>1715333594982</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="documentation">
+      <option name="closed" value="true" />
+      <created>1715358052847</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1715358052847</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="pytorch models" />
-    <option name="LAST_COMMIT_MESSAGE" value="pytorch models" />
+    <MESSAGE value="documentation" />
+    <option name="LAST_COMMIT_MESSAGE" value="documentation" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>307</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>210</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>306</line>
-          <option name="timeStamp" value="36" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>305</line>
-          <option name="timeStamp" value="42" />
+          <url>file://$PROJECT_DIR$/ProcessController.py</url>
+          <line>692</line>
+          <option name="timeStamp" value="70" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
