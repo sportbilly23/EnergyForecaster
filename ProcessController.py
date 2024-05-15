@@ -592,13 +592,13 @@ class Process:
         """
         return self._EF.data_controller.data_summary(self, columns)
 
-    def fit_models(self):
+    def fit_models(self, n_epochs=1, use_torch_validation=False):
         """
         Training all models
         :return: (None)
         """
         for name in self.models:
-            self.fit_model(name)
+            self.fit_model(name, n_epochs, use_torch_validation)
 
     def fit_model(self, name, n_epochs=1, use_torch_validation=False):
         """
