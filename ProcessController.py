@@ -500,10 +500,10 @@ class Process:
 
             forecast = forecasts['forecast'].flatten()
 
-            actual = self.get_target(data_part)[start: (forecasts['start'] + forecasts['steps']) if forecasts['steps']
-                                                else forecasts['steps']].flatten()
+            actual = self.get_target(data_part)[forecasts['start']: (forecasts['start'] + forecasts['steps'])\
+                                                if forecasts['steps'] else forecasts['steps']].flatten()
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[forecasts['start']: forecasts['start'] +
-                                                                          len(forecast)], self.timezone)
+                                                                          forecasts['steps']], self.timezone)
             self._EF.results_visualizer.plot_forecast(scale, actual, forecast, forecasts['conf_int'],
                                                       name=f'{name}' + ('' if isinstance(alpha, type(None)) else
                                                                         f' - confidence {1 - alpha: 1.0%}'), axes=axes)

@@ -271,5 +271,5 @@ if __name__ == '__main__':
     # ef.process_controller.process.plot_forecast('gru', alpha=.05, intervals_from_validation=False)
     # ef.process_controller.process.fit_model('gru', n_epochs=300, use_torch_validation=True)
     # ef.process_controller.set_voting_model('vote_1', ['linear', 'random_forest'], True)
-    print(ef.process_controller.process.evaluation_summary(['vote_1'], 'validation'))
+    ef.process_controller.process.plot_forecast('linear', 'validation', start=120, steps=240, alpha=.05)
     print(time.time())

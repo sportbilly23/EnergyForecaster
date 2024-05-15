@@ -2018,7 +2018,7 @@ class Model:
         if isinstance(self.model, SARIMAX) and self.results:
             forecast_results = self.results.get_forecast(exog=data, steps=len(data))
             forecast = forecast_results.predicted_mean[start: start + steps]
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
@@ -2026,7 +2026,7 @@ class Model:
         elif isinstance(self.model, RandomForestRegressor) and self.results:
             forecast_results = self.model.predict(data)
             forecast = forecast_results[start: start + steps]
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
@@ -2042,14 +2042,14 @@ class Model:
             preds = model.predict(model.output_chunk_length)
             forecast = preds[start: start + steps].all_values().flatten()
 
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
 
         elif isinstance(self.model, MLPRegressor):
             forecast = self.model.predict(data)[start: start + steps]
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
@@ -2067,7 +2067,7 @@ class Model:
                 self.model.model.load_state_dict(self.model.best_loss_state)
 
             forecast = self.model.predict(data)[start: start + steps].squeeze(1).cpu().numpy()
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha)[start: start + steps] if alpha else []
+            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
