@@ -757,7 +757,8 @@ class DTable:
         :param func: (func) Function to apply on data
         :return: (pyplot.axes) Axes of the plot
         """
-        to_date = utils.calculate_to_date(to_date)
+        if not isinstance(from_date, type(None)):
+            to_date = utils.calculate_to_date(to_date)
         data, scale, units = self._plot_calculate_data_scale_units(column, from_date, to_date,
                                                                    reverse_transform, freq, func)
 
@@ -829,7 +830,8 @@ class DTable:
         :param func: (func) Function to apply on data
         :return: (pyplot.axes) Axes of the plot
         """
-        to_date = utils.calculate_to_date(to_date)
+        if not isinstance(from_date, type(None)):
+            to_date = utils.calculate_to_date(to_date)
         legend = []
         valid_types = [('annual', 'hour'), ('annual', 'day'), ('annual', 'week'),
                        ('weekly', 'hour'), ('weekly', 'day'), ('daily', 'hour')]
@@ -891,12 +893,13 @@ class DTable:
         :param freq: (str) New data frequency ('year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'microsecond')
         :return: (pyplot.axes) Axes of the plot
         """
-        to_date = utils.calculate_to_date(to_date)
+        if not isinstance(from_date, type(None)):
+            to_date = utils.calculate_to_date(to_date)
         datas = []
         scale = None
         for column in columns:
             data, scale_, _ = self._plot_calculate_data_scale_units(column, from_date, to_date,
-                                                                   True, freq, np.mean)
+                                                                    True, freq, np.mean)
             datas.append(data)
             if isinstance(scale, type(None)):
                 scale = scale_

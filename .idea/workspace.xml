@@ -6,9 +6,18 @@
   <component name="ChangeListManager">
     <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="fix bug">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DTable.py" beforeDir="false" afterPath="$PROJECT_DIR$/DTable.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.png" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Models.py" beforeDir="false" afterPath="$PROJECT_DIR$/Models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ProcessController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ProcessController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Statistics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statistics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Visualizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Visualizer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,7 +42,7 @@
     &quot;Python.EnergyForecaster.executor&quot;: &quot;Debug&quot;,
     &quot;Python.Models.executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
   <component name="PyConsoleOptionsProvider">
@@ -136,8 +145,27 @@
       <option name="project" value="LOCAL" />
       <updated>1715793429388</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="fix bug">
+      <option name="closed" value="true" />
+      <created>1715805989095</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1715805989095</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="pytorch models" />
@@ -151,33 +179,28 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ProcessController.py</url>
-          <line>692</line>
+          <line>648</line>
           <option name="timeStamp" value="70" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>274</line>
+          <line>187</line>
           <option name="timeStamp" value="73" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Visualizer.py</url>
-          <line>469</line>
-          <option name="timeStamp" value="78" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ProcessController.py</url>
-          <line>506</line>
-          <option name="timeStamp" value="79" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Visualizer.py</url>
-          <line>468</line>
-          <option name="timeStamp" value="80" />
+          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
+          <line>47</line>
+          <option name="timeStamp" value="75" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/Models.py</url>
-          <line>2071</line>
-          <option name="timeStamp" value="84" />
+          <line>1619</line>
+          <option name="timeStamp" value="78" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/Models.py</url>
+          <line>1607</line>
+          <option name="timeStamp" value="89" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

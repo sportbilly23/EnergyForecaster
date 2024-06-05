@@ -283,14 +283,14 @@ class DataController:
                 elif mode == 'process':
                     rev_trans = name.reverse_trans(column)
                 if dataset[column].dtype != np.dtype('O'):
-                    summary[column].append(f'min-max: {np.nanmin(rev_trans)} -> {np.nanmax(rev_trans)}')
+                    summary[column].append(f'min-max: {np.nanmin(rev_trans):1.5f} -> {np.nanmax(rev_trans):1.5f}')
                     summary[column].append(f'mean: {np.nanmean(rev_trans):1.5f}')
                     summary[column].append(f'std dev: {np.nanstd(rev_trans):1.5f}')
                     zscore1 = np.nansum(np.abs(self._EF.data_statistics.zscore(rev_trans) > 3)) / len(dataset[column])
                     summary[column].append(f'z-score: {zscore1: 1.5f}')
                     if 'transformations' in attributes[column] and attributes[column]['transformations']:
-                        summary[column].append(f'trans min-max: {np.nanmin(dataset[column])}'
-                                               f' -> {np.nanmax(dataset[column])}')
+                        summary[column].append(f'trans min-max: {np.nanmin(dataset[column]):1.5f}'
+                                               f' -> {np.nanmax(dataset[column]):1.5f}')
                         summary[column].append(f'trans mean: {np.nanmean(dataset[column]):1.5f}')
                         summary[column].append(f'trans std dev: {np.nanstd(dataset[column]):1.5f}')
                         zscore2 = np.nansum(np.abs(self._EF.data_statistics.zscore(dataset[column]) > 3)) / len(dataset[column])
@@ -312,49 +312,50 @@ class DataController:
         :param name: (str) Name of the file to get in memory
         :return: (None) Put numpy.ndarray in self.datasets dictionary
         """
-        filename = self._check_dataset_name(name)
+        if name not in self.datasets or in_line:
+            filename = self._check_dataset_name(name)
 
-        with h5py.File(os.path.join(self.path, 'data', filename), 'r') as f:
-            columns = self.get_attribute_object('columns', f)
-            dtypes = self.get_attribute_object('dtypes', f)
-            attributes = DictNoDupl()
-            for c in columns:
-                attributes.update({c: {i: self.get_attribute_object(i, f, c)
-                                       for i, j in f[c].attrs.items()}})
+            with h5py.File(os.path.join(self.path, 'data', filename), 'r') as f:
+                columns = self.get_attribute_object('columns', f)
+                dtypes = self.get_attribute_object('dtypes', f)
+                attributes = DictNoDupl()
+                for c in columns:
+                    attributes.update({c: {i: self.get_attribute_object(i, f, c)
+                                           for i, j in f[c].attrs.items()}})
 
-            table = np.zeros(len(f[columns[0]]), dtypes)
-            for column in columns:
-                table[column] = f[column][...]
+                table = np.zeros(len(f[columns[0]]), dtypes)
+                for column in columns:
+                    table[column] = f[column][...]
 
-            for col in columns:
-                if dtypes[col] == np.object_:
-                    for i, j in enumerate(table[col]):
-                        table[col][i] = j.decode()
+                for col in columns:
+                    if dtypes[col] == np.object_:
+                        for i, j in enumerate(table[col]):
+                            table[col][i] = j.decode()
 
-        if self.__check_changes:
-            # Check column names
-            if table.dtype.names != self.datasets[name].columns:
-                return True
-            # Check attributes
-            for col in columns:
-                attrs = self.datasets[name].attributes[col]
-                for attr in attrs:
-                    if attr == 'transformations':
-                        if not utils.arrays_are_equal(self._EF.preprocessor.reverse_trans(table[col],
-                                                                                    attributes[col]['transformations']),
-                                                self.datasets[name].reverse_trans(col)):
-                            return True
-                    else:
-                        if attributes[col][attr] != attrs[attr]:
-                            return True
-            # Check arrays
-            for col in table.dtype.names:
-                return not utils.arrays_are_equal(self.datasets[name][col], table[col])
-        else:
-            if not in_line:
-                self.datasets.update({name: DTable(table, name, attributes, self._EF)})
+            if self.__check_changes:
+                # Check column names
+                if table.dtype.names != self.datasets[name].columns:
+                    return True
+                # Check attributes
+                for col in columns:
+                    attrs = self.datasets[name].attributes[col]
+                    for attr in attrs:
+                        if attr == 'transformations':
+                            if not utils.arrays_are_equal(self._EF.preprocessor.reverse_trans(table[col],
+                                                                                        attributes[col]['transformations']),
+                                                    self.datasets[name].reverse_trans(col)):
+                                return True
+                        else:
+                            if attributes[col][attr] != attrs[attr]:
+                                return True
+                # Check arrays
+                for col in table.dtype.names:
+                    return not utils.arrays_are_equal(self.datasets[name][col], table[col])
             else:
-                return DTable(table, name, attributes, self._EF)
+                if not in_line:
+                    self.datasets.update({name: DTable(table, name, attributes, self._EF)})
+                else:
+                    return DTable(table, name, attributes, self._EF)
 
     def set_dataset(self, name, new_name):
         """
@@ -463,7 +464,7 @@ class DataController:
     def _create_npstructure(self, splits: list, headline: bool) -> np.ndarray:
         """
         Creates the numpy.ndarray object that contains all information of a csv file. If no headers concluded, it
-        creates some 'Unnamed' ones. It manages also header name conflicts. definds the dtype for every column.
+        creates some 'Unnamed' ones. It manages also header name conflicts. Defines the dtype for every column.
         :param splits: (list[str]) A list of strings that contains all information of a csv file
         :param headline: (bool) True if splits list contains headers in the first
         :return: (numpy.ndarray) csv file information in numpy.ndarray formation
@@ -619,7 +620,8 @@ class DataController:
                 if not os.path.isfile(os.path.join(self.path, 'models', n + '.pkl')):
                     raise FileNotFoundError(f'model file {n}.pkl not exists')
                 with open(os.path.join(self.path, 'models', name + '.pkl'), 'wb') as f:
-                    dill.dump(VotingModel([os.path.join(self.path, 'models', n + '.pkl') for n in model_names]), f)
+                    dill.dump(VotingModel(name,
+                                          [os.path.join(self.path, 'models', n + '.pkl') for n in model_names]), f)
         else:
             raise FileExistsError('model name already exists')
 

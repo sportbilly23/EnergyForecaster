@@ -246,7 +246,7 @@ class Process:
         :return: (tuple(float)) Ljung-Box q-value and p-value
         """
         return self._EF.results_statistics.ljung_box(self.get_residuals(name, torch_best_valid,
-                                                                         torch_best_loss_if_no_valid), lags)
+                                                                        torch_best_loss_if_no_valid), lags)
 
     def get_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None, torch_best_valid=True,
                       torch_best_loss_if_no_valid=True, intervals_from_validation=True):
@@ -260,9 +260,20 @@ class Process:
         :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
         :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
                                                    TorchModel only)
+        :param intervals_from_validation: (bool) True to calculate intervals from validation data
         :return: (numpy.ndarray) Forecasts of the model
         """
         model = self.get_model(name)
+        if intervals_from_validation and isinstance(model.results, dict) and 'valid_resid' not in model.results:
+            if isinstance(model, VotingModel):
+                for fn in model.model_filenames:
+                    with open(fn, 'rb') as f:
+                        md = dill.load(f)
+                        _ = md.get_validation_residuals(data=self.get_data('validation'),
+                                                        target=self.get_target('validation'))
+                        self._EF.data_controller._update_model(md)
+            _ = model.get_validation_residuals(data=self.get_data('validation'), target=self.get_target('validation'))
+            self._EF.data_controller._update_model(model)
         data = self.get_data(data_part)
         return self._get_forecasts(model, data, start, steps, alpha, torch_best_valid=torch_best_valid,
                                    torch_best_loss_if_no_valid=torch_best_loss_if_no_valid,
@@ -280,6 +291,7 @@ class Process:
         :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
         :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
                                                    TorchModel only)
+        :param intervals_from_validation: (bool) True to calculate intervals from validation data
         :return: (numpy.ndarray) Forecasts of the model
         """
         return model.get_forecasts(data, start, steps, alpha, torch_best_valid=torch_best_valid,
@@ -303,30 +315,13 @@ class Process:
         """
         Returns validation residuals of a model by name
         :param name: (str) name of the model
-        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
-        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
-                                                   TorchModel only)
         :return: (numpy.ndarray) residuals of the model
         """
         model = self.get_model(name)
-        if not isinstance(model.results, type(None)) and 'valid_resid' in model.results:
+        if isinstance(model.results, dict) and 'valid_resid' in model.results:
             return model.results['valid_resid']
         resids = model.get_validation_residuals(data=self.get_data('validation'), target=self.get_target('validation'))
         self._EF.data_controller._update_model(model)
-        return resids
-
-    def get_all_residuals(self, torch_best_valid=True, torch_best_loss_if_no_valid=True):
-        """
-        Returns residuals of all models
-        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
-        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
-                                                   TorchModel only)
-        :return: (dict) The residuals of all the models
-        """
-        resids = {}
-        for name in self.models:
-            resid = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
-            resids.update({name: resid if not isinstance(resid, type(None)) else 'not fitted'})
         return resids
 
     def get_data(self, data_part='train'):
@@ -455,7 +450,7 @@ class Process:
             if yn.upper() == 'YES':
                 self.models.remove(name)
 
-    def plot_forecast(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
+    def plot_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
                       intervals_from_validation=True, torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Gets forecasts of a model and supplies results_visualizer to create a plot
@@ -465,34 +460,16 @@ class Process:
         :param steps: (int) steps to depict on the plot
         :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
-        :param intervals_from_residuals: (bool) True to create prediction interval from residuals distribution
+        :param intervals_from_validation: (bool) True to calculate intervals from validation data
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
         :return: (pyplot.axes) axes of the plot
         """
         not_alpha = isinstance(alpha, type(None))
         if not not_alpha:
             alpha = min(alpha, 1 - alpha)
         if not_alpha or 0 < alpha <= .5:
-            # resids = self.get_validation_residuals(name) \
-            #     if validation_data else self.get_residuals(name,torch_best_valid=torch_best_valid,
-            #                                        torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)
-            # forecast = self.get_forecasts(name, data_part=data_part, start=start, steps=steps,
-            #                               alpha=None if intervals_from_residuals else alpha)
-            #
-            # if isinstance(forecast, dict):
-            #     conf_int = forecast['conf_int']
-            #     steps = forecast['steps']
-            #     start = forecast['start']
-            #     forecast = forecast['forecast']
-            #
-            # forecast = forecast.flatten()
-            #
-            # if alpha and intervals_from_residuals:
-            #     resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
-            #     resids = self.get_target(data_part).flatten() - forecast
-            #     if isinstance(resids, type(None)):
-            #         alpha = None
-            #     else:
-            #         conf_int = self._get_intervals_from_residuals(resids, forecast, alpha)
             if intervals_from_validation:
                 _ = self.get_validation_residuals(name)
             forecasts = self.get_forecasts(name, data_part, start, steps, alpha, torch_best_valid,
@@ -504,7 +481,7 @@ class Process:
                                                 if forecasts['steps'] else forecasts['steps']].flatten()
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[forecasts['start']: forecasts['start'] +
                                                                           forecasts['steps']], self.timezone)
-            self._EF.results_visualizer.plot_forecast(scale, actual, forecast, forecasts['conf_int'],
+            self._EF.results_visualizer.plot_forecasts(scale, actual, forecast, forecasts['conf_int'],
                                                       name=f'{name}' + ('' if isinstance(alpha, type(None)) else
                                                                         f' - confidence {1 - alpha: 1.0%}'), axes=axes)
         else:
@@ -556,7 +533,7 @@ class Process:
             self._EF.results_visualizer.plot_validation_by_time(model.model.epoch_times, model.model.validation_history,
                                                                 name=f'{name} - validation progress by time', axes=axes)
 
-    def compare_models_loss(self, names, time=False, use_validation=False, axes=None):
+    def plot_compare_models_loss(self, names, time=False, use_validation=False, axes=None):
         """
         Compares loss or validation of different models by epoch or by time
         :param names: (list(str)) names of models to compare
@@ -581,8 +558,8 @@ class Process:
             if time:
                 times.append(np.cumsum(model.model.epoch_times))
 
-        return self._EF.results_visualizer.compare_models_loss(losses, names, times=times if time else None,
-                                                               units=units, axes=axes)
+        return self._EF.results_visualizer.plot_compare_models_loss(losses, names, times=times if time else None,
+                                                                    units=units, axes=axes)
 
     def data_summary(self, columns=None):
         """
@@ -610,6 +587,7 @@ class Process:
         """
         model = self.get_model(name)
         if isinstance(model, Model) and isinstance(model.results, type(None)):
+            print(f'Fitting model "{name}"...')
             model.fit(self.get_data(), self.get_target(), scale=self.get_scale(), n_epochs=n_epochs,
                       validation_data=self.get_data('validation') if use_torch_validation else None,
                       validation_target=self.get_target('validation') if use_torch_validation else None)

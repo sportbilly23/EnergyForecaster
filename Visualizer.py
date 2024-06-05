@@ -8,7 +8,6 @@ class Visualizer:
     """
     def __init__(self, ef):
         self._EF = ef
-        self.datasets = None
 
     def _limit_xticks(self, data, axes, number_of_ticks=20, rotation=30, period=1, grid=False, text=True):
         """
@@ -140,6 +139,7 @@ class Visualizer:
         :param data: (numpy.ndarray) Data of the variable to plot
         :param name: (str) Name for title
         :param units: (str) Units of the variable
+        :param xlab: (str) x label
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
@@ -225,7 +225,7 @@ class VisualizeData(Visualizer):
         title = ' vs '.join(names)
         for data, name in zip(datas, names):
             data = self._EF.preprocessor.minmax(data)[0]
-            axes = self.plot(scale, data, title, '', axes)
+            axes = self.plot(scale, data, name=title, units='', axes=axes)
             legend.append(name)
 
         axes.legend(labels=legend)
@@ -454,7 +454,7 @@ class VisualizeData(Visualizer):
 
 class VisualizeResults(Visualizer):
 
-    def plot_forecast(self, scale, actual, forecast, intervals=[], name='forecasts', units='units', axes=None):
+    def plot_forecasts(self, scale, actual, forecast, intervals=[], name='forecasts', units='units', axes=None):
         """
         Plots forecasts and confidential intervals
         :param scale: (numpy.ndarray) Scale data of the variable to plot
@@ -493,7 +493,7 @@ class VisualizeResults(Visualizer):
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) axes of the plot
         """
-        self.plot(range(1, len(loss_history) + 1), loss_history, name=name, units=units, axes=axes)
+        self.plot(range(1, len(loss_history) + 1), loss_history, xlab='epochs', name=name, units=units, axes=axes)
 
     def plot_validation_by_epoch(self, validation_history, name='validation loss', units='loss', axes=None):
         """
@@ -504,7 +504,8 @@ class VisualizeResults(Visualizer):
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) axes of the plot
         """
-        self.plot(range(1, len(validation_history) + 1), validation_history, name=name, units=units, axes=axes)
+        self.plot(range(1, len(validation_history) + 1), validation_history, xlab='epochs', name=name, units=units,
+                  axes=axes)
 
     def plot_loss_by_time(self, epoch_times, loss_history, name='training loss', units='loss', axes=None):
         """
@@ -528,7 +529,7 @@ class VisualizeResults(Visualizer):
         """
         self.plot(np.cumsum(epoch_times), validation_history, name=name, units=units, axes=axes)
 
-    def compare_models_loss(self, losses, names, times=None, units='loss', axes=None):
+    def plot_compare_models_loss(self, losses, names, times=None, units='loss', axes=None):
         """
         Compares loss or validation of different models by epoch or by time
         :param losses: (list(list)) loss or validation training values lists for different models

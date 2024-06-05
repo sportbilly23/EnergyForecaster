@@ -1532,12 +1532,60 @@ class SelectItem(nn.Module):
 
 
 class VotingModel:
-    def __init__(self, filenames):
+    def __init__(self, name, filenames):
+        self.name = name
         self.model_filenames = filenames
         self._number_of_models = len(filenames)
+        self.results = {'resid': self._get_residuals()}
+
+    def _get_residuals(self):
+        resids = []
+        for i in range(self._number_of_models):
+            with open(self.model_filenames[i], 'rb') as f:
+                model = dill.load(f)
+            resids.append(model.get_residuals(torch_best_valid=False).flatten())
+        return np.mean(np.vstack(resids), axis=0)
+
+    def get_validation_residuals(self, data, target):
+        """
+        Returns validation residuals of the model
+        :param data: (numpy.ndarray) data for validation
+        :param target: (numpy.ndarray) target data for validation
+        :return: (numpy.ndarray) residuals of the model
+        """
+        resids = []
+        for i in range(self._number_of_models):
+            with open(self.model_filenames[i], 'rb') as f:
+                model = dill.load(f)
+            if not isinstance(model.results, dict) or 'valid_resid' not in model.results:
+                if isinstance(data, type(None)) or isinstance(target, type(None)):
+                    raise ValueError(
+                        'no validation residuals founded, you need to run function with validation dataset and target')
+                else:
+                    model.results.update(
+                        {'valid_resid':
+                             target.flatten() - model.get_forecasts(data)['forecast'].flatten()
+                         }
+                    )
+
+            resids.append(model.results['valid_resid'].flatten())
+        self.results.update({'valid_resid': np.mean(np.vstack(resids), axis=0)})
+        return self.results['valid_resid']
 
     def get_forecasts(self, data, start=0, steps=None, alpha=None, torch_best_valid=True,
-                       torch_best_loss_if_no_valid=True, intervals_from_validation=True):
+                      torch_best_loss_if_no_valid=True, intervals_from_validation=True):
+        """
+        Returns forecasts for given data
+        :param data: (numpy.ndarray) data for creating forecasts
+        :param start: (int) starting point for the plot
+        :param steps: (int) steps to depict on the plot
+        :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
+        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
+        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
+                                                   TorchModel only)
+        :param intervals_from_validation: (bool) True to calculate intervals from validation data
+        :return: (dict) forecasts and forecast details
+        """
         forecasts = []
         conf_int = []
         if isinstance(steps, type(None)):
@@ -1556,7 +1604,7 @@ class VotingModel:
             alpha = forecast['alpha']
 
         return {'forecast': np.mean(np.vstack(forecasts), axis=0), 'start': start, 'steps': steps,
-                'alpha': alpha, 'conf_int': np.mean(np.vstack(conf_int), axis=0)}
+                'alpha': alpha, 'conf_int': np.mean(conf_int, axis=0)}
 
 
 class TorchModel:
@@ -1997,15 +2045,16 @@ class Model:
     def get_forecasts(self, data, start=0, steps=None, alpha=None, intervals_from_validation=True,
                       torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
-        Returns forecasts
-        :param data: (numpy.ndarray) new data for making forecasts
+        Returns forecasts for given data
+        :param data: (numpy.ndarray) data for creating forecasts
         :param start: (int) starting point at data
         :param steps: (int) number of steps to forecast
         :param alpha: (float) alpha for prediction intervals (0 < alpha <= .5)
+        :param intervals_from_validation: (bool) True to calculate intervals from validation data
         :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
         :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
                                                    TorchModel only)
-        :return: (numpy.ndarray) forecasts for inserted data
+        :return: (dict) forecasts and forecast details
         """
         if not steps:
             steps = len(data)
@@ -2091,18 +2140,19 @@ class Model:
         elif isinstance(self.model, MLPRegressor):
             return self.results['resid']
         elif isinstance(self.model, TorchModel):
-            return self.results['resid']['best_valid'] if 'valid' in self.results['resid'] and torch_best_valid else \
-                self.results['resid']['best_loss'] if torch_best_loss_if_no_valid else None
+            # return self.results['resid']['best_valid'] if 'valid' in self.results['resid'] and torch_best_valid else \
+            #     self.results['resid']['best_loss'] if torch_best_loss_if_no_valid else None
+            return self.results['valid_resid'] if 'valid_resid' in self.results and torch_best_valid else \
+                self.results['resid'] if torch_best_loss_if_no_valid else None
 
     def get_validation_residuals(self, data=None, target=None):
         """
         Returns validation residuals of the model
-        :param torch_best_valid: (bool) True to use the best validation epoch (for TorchModel only)
-        :param torch_best_loss_if_no_valid: (bool) True to use the best loss epoch if no validation was calculated (for
-                                                   TorchModel only)
+        :param data: (numpy.ndarray) data for validation
+        :param target: (numpy.ndarray) target data for validation
         :return: (numpy.ndarray) residuals of the model
         """
-        if 'valid_resid' not in self.results:
+        if not isinstance(self.results, dict) or 'valid_resid' not in self.results:
             if isinstance(data, type(None)) or isinstance(target, type(None)):
                 raise ValueError(
                     'no validation residuals founded, you need to run function with validation dataset and target')
@@ -2129,6 +2179,15 @@ class Model:
         return TimeSeries(series)
 
     def extend_fit(self, data, target=None, n_epochs=1, validation_data=None, validation_target=None):
+        """
+        Extends model training for models that
+        :param data: (numpy.ndarray) training dataset
+        :param target: (numpy.ndarray) target dataset
+        :param n_epochs: number of epochs for training
+        :param validation_data: (numpy.ndarray) dataset for validation (for Torchmodel only)
+        :param validation_target: (numpy.ndarray) target dataset for validation (for Torchmodel only)
+        :return: (None)
+        """
         if self.results:
             if isinstance(self.model, MLPRegressor):
                 target = target.flatten()
@@ -2193,11 +2252,14 @@ class Model:
                              validation_target=validation_target, **self.fit_params)
             state_dict = self.model.clone_weights()
             self.model.model.load_state_dict(self.model.best_loss_state)
-            self.results = {'resid': {'best_loss': target - self.get_forecasts(data)['forecast']}}
+            # self.results = {'resid': {'best_loss': target - self.get_forecasts(data)['forecast']}}
+            self.results = {'resid': target - self.get_forecasts(data)['forecast']}
             if not isinstance(self.model.best_validation_state, type(None)):
                 self.model.model.load_state_dict(self.model.best_validation_state)
-                self.results['resid'].update(
-                    {'best_valid': validation_target - self.get_forecasts(validation_data)['forecast']})
+                # self.results['resid'].update(
+                #     {'best_valid': validation_target - self.get_forecasts(validation_data)['forecast']})
+                self.results.update({'valid_resid':
+                                         validation_target - self.get_forecasts(validation_data)['forecast']})
             self.model.model.load_state_dict(state_dict)
 
     def _open_darts_model(self):

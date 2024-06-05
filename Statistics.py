@@ -34,19 +34,19 @@ class Statistics:
 
     def pearson_correlation(self, data_a, data_b):
         """
-        Returns Pearson correlation for the two inserted datas
+        Returns Pearson correlation for the two input datas
         :param data_a: (numpy.ndarray) First data
         :param data_b: (numpy.ndarray) Second data
-        :return: (float) Pearson correlation for the data of the two inserted datas
+        :return: (float) Pearson correlation for the data of the two input datas
         """
         return pearsonr(data_a, data_b)
 
     def spearman_correlation(self, data_a, data_b):
         """
-        Returns Spearman correlation for the two inserted datas
+        Returns Spearman correlation for the two input datas
         :param data_a: (numpy.ndarray) First data
         :param data_b: (numpy.ndarray) Second data
-        :return: (float) Spearman correlation for the data of the two inserted datas
+        :return: (float) Spearman correlation for the data of the two input datas
         """
         return spearmanr(data_a, data_b)
 
@@ -103,7 +103,7 @@ class StatsData(Statistics):
         """
         Calculates Z-score for a dataset
         :param data: (numpy.ndarray) Data to calculate Z-score
-        :return: (numpy.ndarray) Z-score for the inserted data
+        :return: (numpy.ndarray) Z-score for the input data
         """
         mn = np.nanmean(data)
         std = np.nanstd(data)
