@@ -1,4 +1,3 @@
-data_visualizer
 EnergyForecaster είναι η κεντρική κλάση του EF.
 
 Είσοδος
@@ -13,7 +12,7 @@ data_controller         Στιγμιότυπο DataController το οποίο θ
 data_statistics         Στιγμιότυπο StatsData το οποίο θα παράγει στατιστικές για τα σύνολα δεδομένων
 data_visualizer         Στιγμιότυπο VisualizeData το οποίο θα κατασκευάζει διαγράμματα για τα σύνολα δεδομένων
 preprocessor            Στιγμιότυπο Preprocessor το οποίο θα διαμορφώνει τα δεδομένα σύμφωνα με τις επιλογές του χρήστη
-process_controller      Στιγμιότυπο Preprocessor το οποίο θα διαχειρίζεται τις διεργασίες και τα μοντέλα
+process_controller      Στιγμιότυπο ProcessController το οποίο θα διαχειρίζεται τις διεργασίες και τα μοντέλα
 results_visualizer      Στιγμιότυπο VisualizeResults το οποίο θα κατασκευάζει διαγράμματα για τα αποτελέσματα
 results_statistics      Στιγμιότυπο StatsResults το οποίο θα παράγει στατιστικές για τα αποτελέσματα
 

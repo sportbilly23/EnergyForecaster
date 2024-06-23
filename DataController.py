@@ -674,7 +674,7 @@ class DataController:
 
     def set_process(self, process, update_file=False):
         """
-        Store process to memory
+        Creates a new process to memory
         :param process: (Process) The process instance
         :param update_file: (bool) True to update the main file with the new process
         :return: (None)

@@ -34,6 +34,7 @@ class EnergyForecaster:
 
 if __name__ == '__main__':
     import time
+
     def test_new_ef(ef_name, process_name):
         ef = EnergyForecaster(f'e:/{ef_name}')
 

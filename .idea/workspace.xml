@@ -4,20 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="fix bug">
+    <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="fix bugs &amp; documentation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DTable.py" beforeDir="false" afterPath="$PROJECT_DIR$/DTable.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DTable.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/ProcessController.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.drawio" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.png" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/energyforecaster.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Models.py" beforeDir="false" afterPath="$PROJECT_DIR$/Models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ProcessController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ProcessController.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statistics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statistics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Visualizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Visualizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,7 +145,15 @@
       <option name="project" value="LOCAL" />
       <updated>1715805989095</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="fix bugs &amp; documentation">
+      <option name="closed" value="true" />
+      <created>1717605252803</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1717605252803</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -172,7 +172,8 @@
     <MESSAGE value="documentation" />
     <MESSAGE value="confidence intervals, voting models" />
     <MESSAGE value="fix bug" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix bug" />
+    <MESSAGE value="fix bugs &amp; documentation" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix bugs &amp; documentation" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -184,12 +185,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>187</line>
+          <line>188</line>
           <option name="timeStamp" value="73" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>47</line>
+          <line>48</line>
           <option name="timeStamp" value="75" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -201,6 +202,11 @@
           <url>file://$PROJECT_DIR$/Models.py</url>
           <line>1607</line>
           <option name="timeStamp" value="89" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
+          <line>186</line>
+          <option name="timeStamp" value="90" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
