@@ -5,7 +5,6 @@ import time
 import tempfile
 import warnings
 from scipy.stats import norm
-
 from sklearn.ensemble import RandomForestRegressor
 import torch
 from torch import nn
@@ -13,12 +12,9 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch import optim
 from sklearn.neural_network import MLPRegressor
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from darts.models import TransformerModel
-from darts.timeseries import TimeSeries
-from xarray import DataArray
-from pandas import DatetimeIndex
 import numpy as np
 import utils
+from pandas import DatetimeIndex
 
 
 class TorchInterface:
@@ -1536,14 +1532,19 @@ class VotingModel:
         self.name = name
         self.model_filenames = filenames
         self._number_of_models = len(filenames)
-        self.results = {'resid': self._get_residuals()}
+        self.results = {'resid': self.get_residuals()}
 
-    def _get_residuals(self):
+    def get_residuals(self, torch_best_valid=False, torch_best_loss_if_no_valid=True):
+        """
+        Returns the mean residuals of the models included
+        :return: (numpy.ndarray) the mean residuals of the models included
+        """
         resids = []
         for i in range(self._number_of_models):
             with open(self.model_filenames[i], 'rb') as f:
                 model = dill.load(f)
-            resids.append(model.get_residuals(torch_best_valid=False).flatten())
+            resids.append(model.get_residuals(torch_best_valid=torch_best_valid,
+                                              torch_best_loss_if_no_valid=torch_best_loss_if_no_valid).flatten())
         return np.mean(np.vstack(resids), axis=0)
 
     def get_validation_residuals(self, data, target):
@@ -1551,7 +1552,7 @@ class VotingModel:
         Returns validation residuals of the model
         :param data: (numpy.ndarray) data for validation
         :param target: (numpy.ndarray) target data for validation
-        :return: (numpy.ndarray) residuals of the model
+        :return: (numpy.ndarray) the mean validation residuals of the models included
         """
         resids = []
         for i in range(self._number_of_models):
@@ -1734,7 +1735,6 @@ class TorchModel:
         'comp2', {'param': value}, 'comp3', {}]
         :return: (None)
         """
-        # previous_cat = None
         previous_comp = None
         for component, params in zip(components[::2], components[1::2]):
 
@@ -1777,8 +1777,6 @@ class TorchModel:
                 self.loss_func = self._get_instance(category, component, params)
             elif previous_comp in ['softmax']:
                 warnings.warn(f'{previous_comp} usually is the last layer')
-            # elif previous_cat in ['']
-            # self._ti.comps[cat][comp]['class'](self._ti.comps[])
             elif category in ['model', 'activation_func']:
                 instance = self._get_instance(category, component, params).to(self.device)
                 self.model.append(instance)
@@ -1793,7 +1791,6 @@ class TorchModel:
             if component in TorchInterface.recursive_models:
                 self.model.append(SelectItem(0))
 
-            # previous_cat = category
             previous_comp = component
         print()
 
@@ -1872,7 +1869,7 @@ class TorchModel:
             if isinstance(self.validation_func, type(None)):
                 self.validation_func = func
             else:
-                if self.validation_func.__class__ != func.__class__:
+                if not self.validation_func.__class__ is func.__class__:
                     func = self.validation_func
                     warnings.warn(f'validation function is already set as {self.validation_func.__class__}')
             val_data = self._from_numpy(validation_data)
@@ -1950,21 +1947,33 @@ class TorchModel:
         dct = self.model.state_dict()
         return {lab: dct[lab].clone() for lab in dct}
 
-    def predict(self, data):
+    def predict(self, data, mode='last'):
         """
         calculates predictions for the given data
         :param data: (numpy.ndarray) data
+        :param mode: (str) use the last, the best loss or the best validation state (values: last/loss/valid)
         :return: (torch.Tensor) tensor with predictions
         """
+        if mode != 'last':
+            cur_state = self.clone_weights()
+            if mode == 'valid':
+                self.model.load_state_dict(self.best_validation_state)
+            elif mode == 'loss':
+                self.model.load_state_dict(self.best_loss_state)
+
         with torch.no_grad():
             self._flatten_parameters_of_rnns()
-            return self.model(self._from_numpy(data))
+            preds = self.model(self._from_numpy(data))
+
+        if mode != 'last':
+            self.model.load_state_dict(cur_state)
+
+        return preds
 
 
 class Model:
     RandomForestRegressor = RandomForestRegressor
     SARIMAX = SARIMAX
-    TransformerModel = TransformerModel
     torch = torch
     nn = nn
     optim = optim
@@ -1985,14 +1994,8 @@ class Model:
         :return: (float) AIC score
         """
         if isinstance(self.model, SARIMAX):
-            return self.model.aic
-        elif isinstance(self.model, RandomForestRegressor):
-            return None
-        elif isinstance(self.model, TransformerModel):
-            return None
-        elif isinstance(self.model, MLPRegressor):
-            return None
-        elif isinstance(self.model, TorchModel):
+            return self.results.aic
+        else:
             return None
 
     def aicc(self):
@@ -2001,14 +2004,8 @@ class Model:
         :return: (float) AICc score
         """
         if isinstance(self.model, SARIMAX):
-            return self.model.aicc
-        elif isinstance(self.model, RandomForestRegressor):
-            return None
-        if isinstance(self.model, TransformerModel):
-            return None
-        elif isinstance(self.model, MLPRegressor):
-            return None
-        elif isinstance(self.model, TorchModel):
+            return self.results.aicc
+        else:
             return None
 
     def bic(self):
@@ -2017,14 +2014,8 @@ class Model:
         :return: (float) BIC score
         """
         if isinstance(self.model, SARIMAX):
-            return self.model.bic
-        elif isinstance(self.model, RandomForestRegressor):
-            return None
-        if isinstance(self.model, TransformerModel):
-            return None
-        elif isinstance(self.model, MLPRegressor):
-            return None
-        elif isinstance(self.model, TorchModel):
+            return self.results.bic
+        else:
             return None
 
     def _get_intervals(self, resids, forecast, alpha):
@@ -2080,22 +2071,6 @@ class Model:
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
                     'conf_int': intervals}
 
-        elif self.model == TransformerModel:
-            model = self._open_darts_model()
-            if isinstance(steps, type(None)):
-                steps = model.output_chunk_length
-            if start > model.output_chunk_length:
-                start = 0
-            if start + steps > model.output_chunk_length:
-                steps = model.output_chunk_length - start
-            preds = model.predict(model.output_chunk_length)
-            forecast = preds[start: start + steps].all_values().flatten()
-
-            intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
-
-            return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
-                    'conf_int': intervals}
-
         elif isinstance(self.model, MLPRegressor):
             forecast = self.model.predict(data)[start: start + steps]
             intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
@@ -2106,16 +2081,15 @@ class Model:
         elif isinstance(self.model, TorchModel):
             if torch_best_valid:
                 try:
-                    self.model.model.load_state_dict(self.model.best_validation_state)
+                    forecast = self.model.predict(data, mode='valid')[start: start + steps].squeeze(1).cpu().numpy()
                 except TypeError as e:
                     if torch_best_loss_if_no_valid:
                         torch_best_valid = False
                     else:
                         raise e
             if not torch_best_valid:
-                self.model.model.load_state_dict(self.model.best_loss_state)
+                forecast = self.model.predict(data, mode='loss')[start: start + steps].squeeze(1).cpu().numpy()
 
-            forecast = self.model.predict(data)[start: start + steps].squeeze(1).cpu().numpy()
             intervals = self._get_intervals(resids, forecast.flatten(), alpha) if alpha else []
 
             return {'forecast': forecast, 'start': start, 'steps': steps, 'alpha': alpha,
@@ -2135,13 +2109,9 @@ class Model:
             return self.results.resid
         elif isinstance(self.model, RandomForestRegressor):
             return self.results['resid']
-        elif isinstance(self.model, TransformerModel):
-            return None
         elif isinstance(self.model, MLPRegressor):
             return self.results['resid']
         elif isinstance(self.model, TorchModel):
-            # return self.results['resid']['best_valid'] if 'valid' in self.results['resid'] and torch_best_valid else \
-            #     self.results['resid']['best_loss'] if torch_best_loss_if_no_valid else None
             return self.results['valid_resid'] if 'valid_resid' in self.results and torch_best_valid else \
                 self.results['resid'] if torch_best_loss_if_no_valid else None
 
@@ -2164,19 +2134,6 @@ class Model:
                 )
 
         return self.results['valid_resid']
-
-    def _darts_timeseries(self, data, scale):
-        """
-        Returns data as darts.Timeseries
-        :param data: (numpy.ndarray) input data
-        :param scale: scale of the data
-        :return: (darts.timeseries.TimeSeries) data as TimeSeries
-        """
-        scale = DatetimeIndex(scale * 1000000000)
-        series = DataArray(np.expand_dims(data, 2), dims=['scale', 'component', 'sample'],
-                           coords=dict(scale=scale),
-                           attrs=dict(static_covariates=None, hierarchy=None))
-        return TimeSeries(series)
 
     def extend_fit(self, data, target=None, n_epochs=1, validation_data=None, validation_target=None):
         """
@@ -2210,7 +2167,7 @@ class Model:
         Trains the model
         :param data: (numpy.ndarray) training dataset
         :param target: (numpy.ndarray) target dataset
-        :param scale: (numpy.ndarray) scale
+        :param scale: (numpy.ndarray) scale | Used for Darts TransformerModel
         :param n_epochs: number of epochs for training
         :param validation_data: (numpy.ndarray) dataset for validation (for Torchmodel only)
         :param validation_target: (numpy.ndarray) target dataset for validation (for Torchmodel only)
@@ -2224,24 +2181,6 @@ class Model:
             self.model.fit(data, target, **self.fit_params)
             self.results = {'resid': target - self.model.predict(data)}
 
-        elif isinstance(self.model, TransformerModel):
-            series = self._darts_timeseries(target, scale)
-
-            past_cov = self._darts_timeseries(data, scale)
-
-            self.model.fit(series, past_cov)
-            self.results = {}
-
-            temp_file = self._temp_file_and_cpkt()
-            self.model.save(temp_file)
-            with open(temp_file, 'rb') as f:
-                self.results.update({'model': f.read()})
-            with open(f'{temp_file}.ckpt', 'rb') as f:
-                self.results.update({'weights': f.read()})
-            os.remove(temp_file)
-            os.remove(f'{temp_file}.ckpt')
-            self.model = TransformerModel
-
         elif isinstance(self.model, MLPRegressor):
             target = target.flatten()
             self.model.fit(data, target, **self.fit_params)
@@ -2252,12 +2191,9 @@ class Model:
                              validation_target=validation_target, **self.fit_params)
             state_dict = self.model.clone_weights()
             self.model.model.load_state_dict(self.model.best_loss_state)
-            # self.results = {'resid': {'best_loss': target - self.get_forecasts(data)['forecast']}}
             self.results = {'resid': target - self.get_forecasts(data)['forecast']}
             if not isinstance(self.model.best_validation_state, type(None)):
                 self.model.model.load_state_dict(self.model.best_validation_state)
-                # self.results['resid'].update(
-                #     {'best_valid': validation_target - self.get_forecasts(validation_data)['forecast']})
                 self.results.update({'valid_resid':
                                          validation_target - self.get_forecasts(validation_data)['forecast']})
             self.model.model.load_state_dict(state_dict)

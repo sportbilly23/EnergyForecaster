@@ -3,6 +3,8 @@ import pytz
 from scipy.stats import boxcox
 import datetime
 from utils import calculate_to_date
+import warnings
+
 DATE_FORMATS = """\n    %a				Abbreviated weekday name.									Sun, Mon, ...
     %A				Full weekday name.											Sunday, Monday, ...
     %w				Weekday as a decimal number.								0, 1, ..., 6
@@ -111,17 +113,6 @@ class Preprocessor:
 
         return boxcox(data, lmbda=lamda), (lambda x: boxcox(x, lamda=lamda), lambda x: (x * lamda + 1) ** (1 / lamda))
 
-    def limit_output(self, data, low, hi):
-        """
-        Setting limits to the output
-        :param data: (numpy.ndarray) Output data to be transformed
-        :param low: (float) The lower desired value of the output
-        :param hi: (float) The higher desired value of the output
-        :return: (numpy.ndarray, func) Transformed data and reverse transformation function
-        """
-        return np.log((data - low)/(hi - data)), (lambda x: np.log((x - low)/(hi - x)),
-                                                  lambda x: (hi - low) * np.exp(x) / (1 + np.exp(x)) + low)
-
     def minmax(self, data):
         """
         Min-Max normalization
@@ -187,19 +178,37 @@ class Preprocessor:
                 quantity.append(d)
                 zeros = 0
 
-        croston = np.zeros(shape=(len(quantity),), dtype=[('inter_arrival', np.int32), ('quantity', np.int32)])
+        croston = np.zeros(shape=(len(quantity),), dtype=[('inter_arrival', np.float32), ('quantity', np.float32)])
         croston['inter_arrival'], croston['quantity'] = inter_arrival, quantity
         return croston
 
-    def to_timestamp(self, data, form):
+    def average_data(self, list_of_data):
+        """
+        Calculates average values of a series-list
+        :param list_of_data: (numpy.ndarray) A list of series
+        :return: (numpy.ndarray) Average data
+        """
+        return np.nanmean(np.vstack(list_of_data), axis=0)
+
+    def merge_data(self, list_of_data):
+        """
+        Concatenate data to one series
+        :param list_of_data: (list(numpy.ndarray)) A list of series
+        :return: (numpy.ndarray) Concatenated data
+        """
+        return np.concatenate(list_of_data)
+
+    def to_timestamp(self, data, form, mask=None):
         """
         Transforms strings of dates to timestamps
         :param data:(numpy.ndarray) Data to be transformed
         :param form: (str) Format of string data
+        :param mask: (str) Mask string to get a part of the string i.e. "********...***"
         :return: (numpy.ndarray) Transformed data - Timestamps
         """
         try:
-            dt = [datetime.datetime.strptime(d, form) for d in data]
+            dt = [datetime.datetime.strptime(''.join([sa for sm, sa in zip(mask, d) if sm != '.']) if mask else d,
+                                             form) for d in data]
             if dt[0].tzinfo:
                 d_utc = [d.astimezone(pytz.timezone('UTC')) for d in dt]
             else:
@@ -247,7 +256,7 @@ class Preprocessor:
         :param time_zone: (str) timezone string
         :return: (pytz.timezone) corresponding pytz timezone
         """
-        return time_zone if time_zone.__class__.__module__ == 'pytz' else pytz.timezone(time_zone)
+        return time_zone if time_zone.__class__.__module__ in ['pytz', 'pytz.tzfile'] else pytz.timezone(time_zone)
 
     def weekend(self, data, time_zone):
         """
@@ -259,20 +268,18 @@ class Preprocessor:
         return self._create_indicators(
             data, lambda x: datetime.datetime.fromtimestamp(x, tz=self._time_zone(time_zone)).weekday() > 4)
 
-    def _cos_sin_transformation(self, name, indicators):
+    def _cos_sin_transformation(self, name, indicators, len_indicator):
         """
         Cyclic transformation of indicators (cos/sin)
         :param name: (str)  To name the columns of the table
         :param indicators: (numpy.ndarray) 1d array of indicators
+        :param len_indicator: (numpy.ndarray) the number of indicators
         :return: (numpy.array) Table with cyclic transformed indicators
         """
-        mn = np.nanmin(indicators)
-        mx = np.nanmax(indicators)
-
         cos_sin = np.zeros(shape=(indicators.shape[0],), dtype=[(f'{name}_sin', np.float64),
                                                                 (f'{name}_cos', np.float64)])
-        cos_sin[f'{name}_sin'] = np.sin(2 * np.pi * (indicators - mn) / (mx - mn))
-        cos_sin[f'{name}_cos'] = np.cos(2 * np.pi * (indicators - mn) / (mx - mn))
+        cos_sin[f'{name}_sin'] = np.sin(2 * np.pi * (indicators) / len_indicator)
+        cos_sin[f'{name}_cos'] = np.cos(2 * np.pi * (indicators) / len_indicator)
         return cos_sin
 
     def weekday(self, data, time_zone, mode='one-hot'):
@@ -290,7 +297,7 @@ class Preprocessor:
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('weekday', indicators)
+            return self._cos_sin_transformation('weekday', indicators, 7)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -309,7 +316,7 @@ class Preprocessor:
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('monthday', indicators)
+            return self._cos_sin_transformation('monthday', indicators, 31)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -328,7 +335,7 @@ class Preprocessor:
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('day_hour', indicators)
+            return self._cos_sin_transformation('day_hour', indicators, 24)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -353,11 +360,11 @@ class Preprocessor:
         """
         indicators = self._create_indicators(data, lambda x: self._calculate_year_day(x, time_zone), np.uint16)
         if mode == 'one-hot':
-            return self._create_dummies_array('year_day', 365, indicators)
+            return self._create_dummies_array('year_day', 366, indicators)
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('year_day', indicators)
+            return self._cos_sin_transformation('year_day', indicators, 366)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -388,7 +395,7 @@ class Preprocessor:
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('year_week', indicators)
+            return self._cos_sin_transformation('year_week', indicators, 54)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 
@@ -407,7 +414,7 @@ class Preprocessor:
         elif mode == 'var':
             return indicators
         elif mode == 'cos-sin':
-            return self._cos_sin_transformation('year_month', indicators)
+            return self._cos_sin_transformation('year_month', indicators, 12)
         else:
             raise KeyError(WRONG_MODE_ERROR)
 

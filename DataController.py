@@ -162,7 +162,8 @@ class DataController:
             raise FileExistsError(f"Destination file ({filename}) already exists. Please define another name.")
 
     def import_csv(self, filename: str, delimiter: str = ',', quotes: str = '', headline: bool = True,
-                   encoding: str = None, skip: int = 0, h5_name: str = None):
+                   encoding: str = None, skip: int = 0, h5_name: str = None, str_to_nan: tuple = (),
+                   all_float: bool = False):
         """
         open a csv file with delimiter, quotechar and type automations
         :param filename: (str) Path/Filename of csv file to import
@@ -172,16 +173,35 @@ class DataController:
         :param encoding: (str) If file contains encoded text members (default None)
         :param skip: (int) Lines at the start of the file that contains no data (default 0)
         :param h5_name: (str) Name to use for storing the created h5 file or None to use the same (default None)
+        :param str_to_nan: tuple(str) List of strings to replace with NaN values
+        :param all_float: (bool) Convert all numeric columns to float
         :return: (None)
         """
         new_filename = f'{h5_name if h5_name else os.path.splitext(os.path.split(filename)[1])[0]}.h5'
-        self._check_dataset_name_availability(filename)
+        self._check_dataset_name_availability(new_filename)
 
         splits = self._get_splitted_string_lines(filename, quotes, delimiter, skip, encoding)
 
-        table = self._create_npstructure(splits, headline)
+        if str_to_nan:
+            splits = self._replace_strings_with_nan(splits, str_to_nan, headline)
+
+        table = self._create_npstructure(splits, headline, all_float=all_float)
 
         self._set_dataset(table, new_filename)
+
+    def _replace_strings_with_nan(self, splits, str_to_nan, headline):
+        """
+        Returns data after replacing containing given strings with numpy.nan
+        :param splits: list(numpy.array) Importing data
+        :param str_to_nan: list(str) List of strings to replace with numpy.nan
+        :param headline: (bool) True if importing data contains a headline
+        :return: None
+        """
+        for i, line in enumerate(splits[headline:], headline):
+            for j, value in enumerate(line):
+                if value in str_to_nan:
+                    splits[i][j] = np.nan
+        return splits
 
     def get_dataset_names(self, full=False):
         """
@@ -199,7 +219,7 @@ class DataController:
         :return: (bool) True if dataset have been changed since last save
         """
         self.__check_changes = True
-        ret = self.get_dataset(name)
+        ret = self.get_dataset(name, in_line=True)
         self.__check_changes = False
         return ret
 
@@ -305,6 +325,16 @@ class DataController:
                 summary[column].append(f'names: {", ".join(dataset[column].dtype.names)}')
         return '\n\n'.join(['\n'.join(summary[i]) for i in summary])
 
+    def get_all_datasets(self):
+        """
+        Loads all files to the memory
+        :return: (None) Put numpy.ndarray in self.datasets dictionary
+        :return:
+        :rtype:
+        """
+        for filename in self.get_dataset_names():
+            self.get_dataset(filename)
+
     def get_dataset(self, name: str, in_line: bool = False):
         """
         Loads an h5 file to the memory
@@ -332,7 +362,7 @@ class DataController:
                         for i, j in enumerate(table[col]):
                             table[col][i] = j.decode()
 
-            if self.__check_changes:
+            if self.__check_changes and name in self.datasets:
                 # Check column names
                 if table.dtype.names != self.datasets[name].columns:
                     return True
@@ -349,8 +379,8 @@ class DataController:
                             if attributes[col][attr] != attrs[attr]:
                                 return True
                 # Check arrays
-                for col in table.dtype.names:
-                    return not utils.arrays_are_equal(self.datasets[name][col], table[col])
+                return sum(
+                    [not utils.arrays_are_equal(self.datasets[name][col], table[col]) for col in table.dtype.names]) > 0
             else:
                 if not in_line:
                     self.datasets.update({name: DTable(table, name, attributes, self._EF)})
@@ -461,7 +491,22 @@ class DataController:
         """
         return dill.loads(b''.join([b'\x00' if i == b'' else i for i in f[path].attrs[attribute]]))
 
-    def _create_npstructure(self, splits: list, headline: bool) -> np.ndarray:
+    def merge_datasets(self, datasets: list, name: str, load_to_memory=False):
+        """
+        Create a new column by merging a list of columns in a row
+        :param datasets: list(str) Ordered name-list of columns to be merged
+        :param name: (str) The name of the created column
+        :param load_to_memory: (bool) True to auto-get the created dataset in memory
+        :return: None
+        """
+        new_name = f'{os.path.splitext(os.path.split(name)[1])[0]}.h5'
+        self._check_dataset_name_availability(new_name)
+
+        self._set_dataset(self._EF.preprocessor.merge_data([self.datasets[d].data for d in datasets]), new_name)
+        if load_to_memory:
+            self.get_dataset(name)
+
+    def _create_npstructure(self, splits: list, headline: bool, all_float: bool = False) -> np.ndarray:
         """
         Creates the numpy.ndarray object that contains all information of a csv file. If no headers concluded, it
         creates some 'Unnamed' ones. It manages also header name conflicts. Defines the dtype for every column.
@@ -474,6 +519,10 @@ class DataController:
 
         series = np.array(splits)
         dtypes = self._get_types(series)
+
+        if all_float:
+            dtypes = [np.float64 if np.issubdtype(d, np.number) else d for d in dtypes]
+
         table = self._create_table(series, head, dtypes)
         return table
 
@@ -570,9 +619,9 @@ class DataController:
         min_ = min(series)
         max_ = max(series)
 
-        numeric = not all_.strip('0123456789.e-+')
-        if not numeric:
-            return np.dtypes.ObjectDType
+        # numeric = not all_.strip('0123456789.e-+')
+        # if not numeric:
+        #     return np.dtypes.ObjectDType
 
         if '.' in all_ or '' in series:
             check[0] = check[1] = False
@@ -819,7 +868,7 @@ class DataController:
                 for lag, lag_data in zip(lags if not no_lags else [0], lag_cols.dtype.names):
                     if names:
                         for name in names:
-                            column = f'{col}_lag-{lag}::{name}' if not no_lags else f'{col}::{name}'
+                            column = f'{col}_lag-{lag}::{name}@{dataset.name}' if not no_lags else f'{col}::{name}@{dataset.name}'
                             process.data.update({column: lag_cols[lag_data][name]})
                             add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
                                            transformations=dataset.attributes[col]['transformations'],
@@ -827,7 +876,7 @@ class DataController:
                             process.data_index.update({data_id: column})
                             data_id += 1
                     else:
-                        column = f'{col}_lag-{lag}'
+                        column = f'{col}_lag-{lag}@{dataset.name}'
                         process.data.update({column: lag_cols[lag_data]})
                         add_attributes(column, comments=dataset.attributes[col]['comments'], lag=lag,
                                        transformations=dataset.attributes[col]['transformations'],

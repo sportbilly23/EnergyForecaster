@@ -105,7 +105,7 @@ class DTable:
                              self._preprocessor.exp2(self.data[column]),
                              assign, rename)
 
-    def boxcox(self, column: str, lamda: int = None, assign: str = None, rename: str = None):
+    def boxcox(self, column: str, lamda: float = None, assign: str = None, rename: str = None):
         """
         Box-Cox transformation with lambda parameter
         :param column: (str) The label of the DTable's column to be transformed
@@ -192,12 +192,13 @@ class DTable:
                              self._preprocessor.croston_method(self.data[column]),
                              assign, rename)
 
-    def to_timestamp(self, column: str, form: str, tzone: str, assign: str = None, rename: str = None,
+    def to_timestamp(self, column: str, form: str, tzone: str, mask: str=None, assign: str = None, rename: str = None,
                      make_scale: bool = True):
         """
         Transforms strings of dates to timestamps
         :param column: (str) The label of the DTable's column to be transformed
         :param form: (str) Format of string data
+        :param mask: (str) Mask string to get a part of the string i.e. "********   ***"
         :param tzone: (str) Timezone label (eg. 'Europe/Athens')
         :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
                              to the DTable if None is selected.
@@ -205,12 +206,28 @@ class DTable:
         :param make_scale: (bool) True to define it as scale
         :return: (numpy.ndarray) Transformed data - Timestamps
         """
-        if make_scale:
-            self.attributes[column].update({'is_scale': True})
-            self.attributes[column].update({'timezone': utils.get_tzinfo(tzone)})
-        return self._inplace(column,
-                             self._preprocessor.to_timestamp(self.data[column], form),
+        data = self._inplace(column,
+                             self._preprocessor.to_timestamp(self.data[column], form, mask),
                              assign, rename)
+        if make_scale and assign:
+            name = rename if rename else column
+            self.attributes[name].update({'is_scale': True})
+            self.attributes[name].update({'timezone': utils.get_tzinfo(tzone)})
+        return data
+
+    def average_data(self, columns: list, rename: str, assign: str = None):
+        """
+        Returns a new column by averaging values from a list of columns
+        :param columns: list(str) Name-list of columns
+        :param rename: (str) Name of the new column
+        :param assign: (str) 'inplace'/'add'/None. Input column will be replaced if 'inplace' is selected. No impact
+                             to the DTable if None is selected.
+        :return: (numpy.ndarray) Array with average values
+        """
+        if assign == 'inplace':
+            raise ValueError('Inplace not available for average_data function!')
+        self._inplace(columns,
+                      self._preprocessor.average_data([self.data[column] for column in columns]), assign, rename)
 
     def weekend(self, column: str, assign: str = None, rename: str = None):
         """
@@ -435,13 +452,14 @@ class DTable:
 
         if assign in ['inplace', 'add']:
 
-            new_column = self._random_name(column, self.columns) if assign == 'add' else column
-
-            dtype = [(i, self.data.dtype[i]) for i in self.data.dtype.names
-                     if not (assign == 'inplace' and i == column)]
+            if isinstance(column, str):
+                new_column = self._random_name(column, self.columns) if assign == 'add' else column
 
             if rename:
                 new_column = rename
+
+            dtype = [(i, self.data.dtype[i]) for i in self.data.dtype.names
+                     if not (assign == 'inplace' and i == column)]
 
             dtype.append((new_column, data.dtype))
 
@@ -935,7 +953,7 @@ class DTable:
         data = self._get_multi_differentiated_column(column, diffs)
         return self._stats.acf(data, nlags=nlags, qstat=qstat, alpha=alpha, missing=missing)
 
-    def pacf(self, column, nlags=None, method='yw', alpha=None, diffs=()):
+    def pacf(self, column, nlags=None, method='yw', alpha=None, diffs=(), missing='none'):
         """
         Estimates partial autocorrelation on multi-differentiate data of given column
         :param column: (str) Label of the column
@@ -943,30 +961,33 @@ class DTable:
         :param method: Method for calculations ('yw', 'ywm', 'ols-inefficient', 'ols-adjusted', 'ld', 'ldb', 'burg')
         :param alpha: (float) For calculation of confident intervals
         :param diffs: (list(int)) List of integers representing the differentiations to be calculated
+        :param missing: (str) Specifying how the nans are treated ('none', 'linear', 'raise')
         :return: (list) Results from statsmodels module pacf on multi-differentiate data of given column
         """
         data = self._get_multi_differentiated_column(column, diffs)
-        return self._stats.pacf(data, nlags=nlags, method=method, alpha=alpha)
+        return self._stats.pacf(data, nlags=nlags, method=method, alpha=alpha, missing=missing)
 
-    def plot_acf(self, column, nlags=None, diffs=(), axes=None):
+    def plot_acf(self, column, nlags=None, diffs=(), missing='drop', axes=None):
         """
         Create a figure with an ACF plot on multi-differentiate data of given column
         :param column: (str) Label of the column
         :param nlags: (int) Number of plotted lags
         :param diffs: (list(int)) List of integers representing the differentiations to be calculated
+        :param missing: (str) Specifying how the nans are treated ('none', 'raise', 'conservative', 'drop')
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
         data = self._get_multi_differentiated_column(column, diffs)
-        return self._visualizer.plot_acf(data, name=column, nlags=nlags, axes=axes)
+        return self._visualizer.plot_acf(data, name=column, nlags=nlags, missing=missing, axes=axes)
 
-    def plot_pacf(self, column, nlags=None, diffs=(), method='yw', axes=None):
+    def plot_pacf(self, column, nlags=None, diffs=(), method='yw', missing='linear', axes=None):
         """
         Create a figure with a PACF plot on multi-differentiate data of given column
         :param column: (str) Label of the column
         :param nlags: (int) Number of plotted lags
         :param diffs: (list(int)) List of integers representing the differentiations to be calculated
         :param method: Specifies which method for the calculations to use
+        :param missing: (str) Specifying how the nans are treated ('none', 'linear', 'raise')
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
@@ -974,7 +995,7 @@ class DTable:
         if diffs:
             while np.isnan(data[0]):
                 data = data[1:]
-        return self._visualizer.plot_pacf(data, name=column, nlags=nlags, method=method, axes=axes)
+        return self._visualizer.plot_pacf(data, name=column, nlags=nlags, method=method, missing=missing, axes=axes)
 
     def plot_moving_averages(self, column, period, axes=None):
         """

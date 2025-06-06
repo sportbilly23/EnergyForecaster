@@ -16,20 +16,20 @@ CMDS = {'process': ['insert_data'],
 
 
 class Process:
-    def __init__(self, name, target=DictNoDupl(), data=DictNoDupl(), scale=None, data_index={}, target_index={},
-                 timezone=pytz.utc, lags=1, black_lags=0, measure_period=1, train=.6, validation=.2, test=.2, models=[],
-                 attributes=DictNoDupl(), EF=None):
+    def __init__(self, name, target=None, data=None, scale=None, data_index=None, target_index=None,
+                 timezone=pytz.utc, lags=1, black_lags=0, measure_period=1, train=.6, validation=.2, test=.2,
+                 models=None, attributes=None, EF=None):
         self.name = name
-        self.data = data
-        self.target = target
+        self.data = data if data else DictNoDupl()
+        self.target = target if target else DictNoDupl()
         self.scale = scale
-        self.data_index = data_index
-        self.target_index = target_index
+        self.data_index = data_index if data_index else {}
+        self.target_index = target_index if target_index else {}
         self.train = train
         self.validation = validation
         self.test = test
-        self.models = models
-        self.attributes = attributes
+        self.models = models if models else []
+        self.attributes = attributes if attributes else DictNoDupl()
         self.measure_period = measure_period
         self.timezone = timezone
         self.lags = lags
@@ -106,7 +106,7 @@ class Process:
         """
         actual = self.get_target(data_part).flatten()
         forecast = self.get_forecasts(name, data_part, torch_best_valid=torch_best_valid,
-                                      torch_best_loss_if_no_valid=torch_best_loss_if_no_valid).flatten()
+                                      torch_best_loss_if_no_valid=torch_best_loss_if_no_valid)['forecast'].flatten()
 
         if isinstance(forecast, dict):
             forecast = forecast['forecast']
@@ -201,7 +201,7 @@ class Process:
         :return: (float) AIC evaluation for a model
         """
         model = self.get_model(name)
-        return model.aic
+        return model.aic()
 
     def aicc(self, name):
         """
@@ -210,7 +210,7 @@ class Process:
         :return: (float) AICc evaluation for a model
         """
         model = self.get_model(name)
-        return model.aicc
+        return model.aicc()
 
     def bic(self, name):
         """
@@ -219,7 +219,7 @@ class Process:
         :return: (float) BIC evaluation for a model
         """
         model = self.get_model(name)
-        return model.bic
+        return model.bic()
 
     def box_pierce(self, name, lags=[10], torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
@@ -397,7 +397,7 @@ class Process:
                                                    TorchModel only)
         :return: (pyplot.axes) axes of the plot
         """
-        resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid)
+        resids = self.get_residuals(name, torch_best_valid, torch_best_loss_if_no_valid).flatten()
         ln = len(resids)
         scale = self.get_scale()[start: start + steps if steps else ln - start]
         scale_str = utils.timestamp_to_date_str(scale, self.timezone)
@@ -451,7 +451,7 @@ class Process:
                 self.models.remove(name)
 
     def plot_forecasts(self, name, data_part='train', start=0, steps=None, alpha=None, axes=None,
-                      intervals_from_validation=True, torch_best_valid=True, torch_best_loss_if_no_valid=True):
+                       intervals_from_validation=True, torch_best_valid=True, torch_best_loss_if_no_valid=True):
         """
         Gets forecasts of a model and supplies results_visualizer to create a plot
         :param name: (str) name of the model
@@ -482,8 +482,9 @@ class Process:
             scale = utils.timestamp_to_date_str(self.get_scale(data_part)[forecasts['start']: forecasts['start'] +
                                                                           forecasts['steps']], self.timezone)
             self._EF.results_visualizer.plot_forecasts(scale, actual, forecast, forecasts['conf_int'],
-                                                      name=f'{name}' + ('' if isinstance(alpha, type(None)) else
-                                                                        f' - confidence {1 - alpha: 1.0%}'), axes=axes)
+                                                       name=f'{name}' + ('' if isinstance(alpha, type(None)) else
+                                                                         f' - confidence {1 - alpha: 1.0%}'),
+                                                       units=self.attributes[self.target_index[0]]['units'], axes=axes)
         else:
             raise ValueError('Alpha must be a float number between 0 and 1')
 
@@ -510,24 +511,48 @@ class Process:
             return self._EF.data_visualizer.plot_shapes(scale, datas, columns, axes=axes)
 
     def plot_loss_by_epoch(self, name, axes=None):
+        """
+        Plots training loss by epochs
+        :param name: (str) name of the model
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: None
+        """
         model = self.get_model(name)
         if isinstance(model.model, TorchModel):
             self._EF.results_visualizer.plot_loss_by_epoch(model.model.loss_history,
                                                            name=f'{name} - loss progress', axes=axes)
 
     def plot_validation_by_epoch(self, name, axes=None):
+        """
+        Plots training validation loss by epochs
+        :param name: (str) name of the model
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: None
+        """
         model = self.get_model(name)
         if isinstance(model.model, TorchModel) and not isinstance(model.model.validation_history, type(None)):
             self._EF.results_visualizer.plot_validation_by_epoch(model.model.validation_history,
                                                                  name=f'{name} - validation progress', axes=axes)
 
     def plot_loss_by_time(self, name, axes=None):
+        """
+        Plots training loss by time
+        :param name: (str) name of the model
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: None
+        """
         model = self.get_model(name)
         if isinstance(model.model, TorchModel):
             self._EF.results_visualizer.plot_loss_by_time(model.model.epoch_times, model.model.loss_history,
                                                           name=f'{name} - loss progress by time', axes=axes)
 
     def plot_validation_by_time(self, name, axes=None):
+        """
+        Plots training validation loss by time
+        :param name: (str) name of the model
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: None
+        """
         model = self.get_model(name)
         if isinstance(model.model, TorchModel) and not isinstance(model.model.validation_history, type(None)):
             self._EF.results_visualizer.plot_validation_by_time(model.model.epoch_times, model.model.validation_history,
@@ -549,10 +574,10 @@ class Process:
         for name in names:
             model = self.get_model(name)
             if isinstance(loss_func, type(None)):
-                loss_func = model.model.loss_func.__class__.__name__ if not use_validation else model.model.validation_func
+                loss_func = model.model.loss_func if not use_validation else model.model.validation_func
             else:
-                if (not use_validation and loss_func != model.model.loss_func.__class__.__name__) or \
-                        (use_validation and loss_func != model.model.validation_func.__class__.__name__):
+                if (not use_validation and not loss_func.__class__ is model.model.loss_func.__class__) or \
+                        (use_validation and not loss_func.__class__ is model.model.validation_func.__class__):
                     raise ValueError(f'models must have same {units} function')
             losses.append(model.model.loss_history if not use_validation else model.model.validation_history)
             if time:
@@ -744,10 +769,9 @@ class ProcessController:
         :return: (None)
         """
         amount = train + validation + test
-        self._EF.data_controller.set_process(Process(name, lags=lags, black_lags=black_lags,
-                                                     measure_period=measure_period, train=train / amount,
-                                                     validation=validation / amount, test=test / amount,
-                                                     EF=self._EF), update_file=update_file)
+        process = Process(name, lags=lags, black_lags=black_lags, measure_period=measure_period, train=train / amount,
+                          validation=validation / amount, test=test / amount, EF=self._EF)
+        self._EF.data_controller.set_process(process, update_file=update_file)
 
     def get_process_names(self):
         """
@@ -853,7 +877,6 @@ class ProcessController:
 
                 if command == 'get_dataset':
                     dataset = params['name']
-
 
 
 # d = ef.process_controller.process.get_target('validation')

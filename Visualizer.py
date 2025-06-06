@@ -49,12 +49,37 @@ class Visualizer:
                 mx = max(mx, int(number))
         return f'{pattern} - {mx + 1}'
 
-    def plot_acf(self, data, name='data', nlags=None, axes=None):
+    def plot_residuals(self, scale, resids, name='residuals', units='units', axes=None):
+        """
+        Plot residuals
+        :param scale: (numpy.ndarray) The scale data
+        :param resids: (numpy.ndarray) The residuals
+        :param name: (str) Name for title
+        :param units: (str) Units of the residuals
+        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
+        :return: (pyplot.axes) Axes of the plot
+        """
+        plt.interactive(True)
+        if not axes:
+            figure = plt.figure(self._get_next_figure_name('Residuals'))
+            axes = figure.subplots()
+        self._limit_xticks(scale, axes, number_of_ticks=20, rotation=30, text=True, grid=True)
+
+        axes.bar(scale, resids, width=1)
+
+        axes.set_title(f'{name}')
+        axes.set_xlabel('time')
+        axes.set_ylabel(units)
+
+        return axes
+
+    def plot_acf(self, data, name='data', nlags=None, missing='drop', axes=None):
         """
         Create a figure with an ACF plot
         :param data: (numpy.ndarray) Data to create the plot
         :param name: (str) The name of the plot-title
         :param nlags: (int) Number of plotted lags
+        :param missing: (str) Specifying how the nans are treated ('none', 'raise', 'conservative', 'drop')
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
@@ -62,7 +87,7 @@ class Visualizer:
         if not axes:
             figure = plt.figure(self._get_next_figure_name('ACF Plot'))
             axes = figure.subplots()
-        acf = self._EF.data_statistics.acf(data, nlags=nlags, missing='conservative')
+        acf = self._EF.data_statistics.acf(data, nlags=nlags, missing=missing)
         rng = np.arange(1, len(acf))
         plt.hlines(0, rng[0], rng[-1], color='grey')
         axes.bar(rng, acf[1:], width=.2)
@@ -74,13 +99,14 @@ class Visualizer:
         axes.set_ylabel('correlation')
         return axes
 
-    def plot_pacf(self, data, name='data', nlags=None, method='yw', axes=None):
+    def plot_pacf(self, data, name='data', nlags=None, method='yw', missing='linear', axes=None):
         """
         Create a figure with a PACF plot
         :param data: (numpy.ndarray) Data to create the plot
         :param name: (str) The name of the plot-title
         :param nlags: (int) Number of plotted lags
         :param method: Specifies which method for the calculations to use
+        :param missing: (str) Specifying how the nans are treated ('none', 'linear', 'raise')
         :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
         :return: (pyplot.axes) Axes of the plot
         """
@@ -88,7 +114,7 @@ class Visualizer:
         if not axes:
             figure = plt.figure(self._get_next_figure_name('PACF Plot'))
             axes = figure.subplots()
-        pacf = self._EF.data_statistics.pacf(data, nlags=nlags, method=method)
+        pacf = self._EF.data_statistics.pacf(data, nlags=nlags, method=method, missing=missing)
 
         rng = np.arange(1, len(pacf))
         plt.hlines(0, rng[0], rng[-1], color='grey')
@@ -124,11 +150,11 @@ class Visualizer:
         axes.set_ylabel('counts')
 
         if plot_norm and density:
-            std = np.std(data, ddof=2)
-            mu = np.mean(data)
+            std = np.nanstd(data, ddof=2)
+            mu = np.nanmean(data)
             rng = np.linspace(mu - 4 * std, mu + 4 * std, 1000)
             nd_y = (1 / (np.sqrt(2 * np.pi) * std)) * np.exp(-0.5 * (1 / std * (rng - mu)) ** 2)
-            plt.plot(rng, nd_y)
+            axes.plot(rng, nd_y)
 
         return axes
 
@@ -151,29 +177,6 @@ class Visualizer:
         axes.set_title(f'{name}')
         axes.set_xlabel(xlab)
         axes.set_ylabel(units)
-        return axes
-
-    def plot_residuals(self, scale, resids, name='residuals', units='units', axes=None):
-        """
-        Plot residuals
-        :param scale: (numpy.ndarray) The scale data
-        :param resids: (numpy.ndarray) The residuals
-        :param name: (str) Name for title
-        :param units: (str) Units of the residuals
-        :param axes: (pyplot.axes) Axes where the plot will be drawn. Set None to use a new figure.
-        :return: (pyplot.axes) Axes of the plot
-        """
-        plt.interactive(True)
-        if not axes:
-            figure = plt.figure(self._get_next_figure_name('Residuals'))
-            axes = figure.subplots()
-        self._limit_xticks(scale, axes, number_of_ticks=20, rotation=0, text=True, grid=True)
-        axes.bar(scale, resids, width=.2)
-
-        axes.set_title(f'{name}')
-        axes.set_xlabel('time')
-        axes.set_ylabel(units)
-
         return axes
 
 
@@ -229,6 +232,8 @@ class VisualizeData(Visualizer):
             legend.append(name)
 
         axes.legend(labels=legend)
+
+        return axes
 
     def plot_seasons(self, datas, legend_lines, name='data', units='units', axes=None):
         """
@@ -532,9 +537,10 @@ class VisualizeResults(Visualizer):
     def plot_compare_models_loss(self, losses, names, times=None, units='loss', axes=None):
         """
         Compares loss or validation of different models by epoch or by time
-        :param losses: (list(list)) loss or validation training values lists for different models
+        :param losses: (list(list(float))) loss or validation training value lists for different models
         :param names: (list(str)) names for legend labels
-        :param units: (str) y-axes label units
+        :param names: (list(list(float))) epoch duration times for different models
+        :param times: (str) y-axes label units
         :param axes: (pyplot.axes) axes where the plot will be drawn. Set None to use a new figure.
         :return:  (pyplot.axes) axes of the plot
         """
@@ -543,7 +549,7 @@ class VisualizeResults(Visualizer):
             xlab = 'epochs'
             times = [range(1, len(loss) + 1) for loss in losses]
         for loss, time in zip(losses, times):
-            axes = self.plot(time, loss, xlab=xlab, units=units, axes=axes)
+            axes = self.plot(time, loss, name=f'{units} progress by {xlab.strip("s")}', xlab=xlab, units=units, axes=axes)
         axes.legend(labels=names)
 
         return axes

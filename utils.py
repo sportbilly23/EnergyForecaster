@@ -76,3 +76,12 @@ def timestamp_to_date_str(dates, timezone):
     """
     return np.array([datetime.datetime.fromtimestamp(i, tz=timezone).strftime('%d/%m/%y %H:%M:%S') for i in dates])
 
+
+def masked_string(string, mask):
+    """
+    Returns part of a string using a mask
+    :param string: Inserted string
+    :param mask: (str) Mask string to get a part of the string i.e. "********   ***"
+    :return: (str) Masked string
+    """
+    return ''.join([string[i] for i, s in enumerate(mask) if s != ' '])

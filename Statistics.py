@@ -62,15 +62,25 @@ class Statistics:
         """
         return sm_acf(data, nlags=nlags, qstat=qstat, alpha=alpha, missing=missing)
 
-    def pacf(self, data, nlags=None, method='yw', alpha=None):
+    def pacf(self, data, nlags=None, method='yw', alpha=None, missing='none'):
         """
         Estimates partial autocorrelation
         :param data: (numpy.ndarray) Data to estimate PACF
         :param nlags: (int) Number of lags
         :param method: Method for calculations ('yw', 'ywm', 'ols-inefficient', 'ols-adjusted', 'ld', 'ldb', 'burg')
         :param alpha: (float) For calculation of confident intervals
+        :param missing: (str) Specifying how the nans are treated ('none', 'linear', 'raise')
         :return: (list) Results from statsmodels module pacf
         """
+        if np.any(np.isnan(data)):
+            if missing == 'linear':
+                data = self._EF.preprocessor.fill_linear(data)
+            elif missing == 'raise':
+                raise ValueError('data contains nan values')
+            elif missing == 'none':
+                pass
+            else:
+                raise ValueError('"missing" parameter maust be "none", "linear" or "raise"')
         return sm_pacf(data, nlags=nlags, method=method, alpha=alpha)
 
 

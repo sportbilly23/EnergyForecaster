@@ -6,15 +6,29 @@
   <component name="ChangeListManager">
     <list default="true" id="7c9e2ffd-6107-4f77-b152-05a8119cfe4c" name="Changes" comment="fix bugs &amp; documentation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DTable.py" beforeDir="false" afterPath="$PROJECT_DIR$/DTable.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DataController.py" beforeDir="false" afterPath="$PROJECT_DIR$/DataController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/EnergyForecaster.py" beforeDir="false" afterPath="$PROJECT_DIR$/EnergyForecaster.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/DataController.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/EnergyForecaster.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Models.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Models.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Implementation_Plan/Classes/Visualizer.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Models.py" beforeDir="false" afterPath="$PROJECT_DIR$/Models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/Preprocessor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProcessController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ProcessController.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Statistics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statistics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Visualizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/Visualizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -33,7 +47,9 @@
     &quot;Python.DataController.executor&quot;: &quot;Debug&quot;,
     &quot;Python.EnergyForecaster.executor&quot;: &quot;Debug&quot;,
     &quot;Python.Models.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.python_1.executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/sportbilly/AppData/Local/Programs/Python/Python37/python.exe&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
@@ -44,7 +60,7 @@
       </console-settings>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.EnergyForecaster">
     <configuration name="EnergyForecaster" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EnergyForecaster" />
       <option name="ENV_FILES" value="" />
@@ -67,18 +83,34 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="python_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="EnergyForecaster" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/python_1.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.EnergyForecaster" />
+        <item itemvalue="Python.python_1" />
       </list>
     </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-python-sdk-0509580d9d50-746f403e7f0c-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-241.14494.241" />
-      </set>
-    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -180,33 +212,38 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ProcessController.py</url>
-          <line>648</line>
+          <line>673</line>
           <option name="timeStamp" value="70" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>188</line>
+          <line>290</line>
           <option name="timeStamp" value="73" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>48</line>
-          <option name="timeStamp" value="75" />
+          <url>file://$PROJECT_DIR$/DTable.py</url>
+          <line>952</line>
+          <option name="timeStamp" value="104" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Models.py</url>
-          <line>1619</line>
-          <option name="timeStamp" value="78" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Models.py</url>
-          <line>1607</line>
-          <option name="timeStamp" value="89" />
+          <url>file://$PROJECT_DIR$/Preprocessor.py</url>
+          <line>169</line>
+          <option name="timeStamp" value="105" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
-          <line>186</line>
-          <option name="timeStamp" value="90" />
+          <line>217</line>
+          <option name="timeStamp" value="133" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/EnergyForecaster.py</url>
+          <line>208</line>
+          <option name="timeStamp" value="134" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/DTable.py</url>
+          <line>228</line>
+          <option name="timeStamp" value="160" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
